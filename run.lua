@@ -1,5 +1,15 @@
 require"data"
+require"model"
 
 
-training = Dataset:load_all("train")
+--data
+dataset = GoDataset
 
+training    = dataset:load_all("train")
+validation  = dataset:load_all("validate")
+
+--model
+
+--train
+
+--evaluate
