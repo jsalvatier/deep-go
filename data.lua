@@ -48,26 +48,28 @@ function Dataset:preprocess(data)
     return data
 end
 
-function Dataset:initialize_io(group, size)
-    input_dimensions = {}
+function Dataset:new_inputs_outputs(size)
+    local input_dimensions = {}
     table.insert(input_dimensions, size)
     for _, dimension in pairs(self.input_dimensions) do
         table.insert(input_dimensions, dimension)
     end
-    output_dimensions = {}
+    local output_dimensions = {}
     table.insert(output_dimensions, size)
     for _, dimension in pairs(self.output_dimensions) do
         table.insert(output_dimensions, dimension)
     end
-    inputs = torch.DoubleTensor(torch.LongStorage(input_dimensions)):zero()
-    outptus = torch.DoubleTensor(torch.LongStorage(output_dimensions)):zero()
+
+    local inputs = torch.DoubleTensor(torch.LongStorage(input_dimensions)):zero()
+    local outputs = torch.DoubleTensor(torch.LongStorage(output_dimensions)):zero()
+
     return inputs, outputs
 end
 
 function Dataset:minibatch(group, size)
     if self._initialized ~= true then self:init() end
     size = size or self.default_minibatch
-    local inputs, outputs = self:initialize_io(size)
+    local inputs, outputs = self:new_inputs_outputs(size)
     for i = 1, size do
         local data = self:load_random_datum(group)
         inputs[i] = data.input
@@ -78,10 +80,12 @@ end
 
 function Dataset:load_all(group)
     if self._initialized ~= true then self:init() end
-    size = #self.files[group]
-    inputs, outputs = self:initialize_io(size)
+    local files = self.files[group]
+    local size = #files
+    local inputs, outputs = self:new_inputs_outputs(size)
+    
     for i = 1, size do
-        local data = self:load_and_preprocess(self.files[i])
+        local data = self:load_and_preprocess(files[i])
         inputs[i] = data.input
         outputs[i] = data.output
     end
@@ -89,12 +93,12 @@ function Dataset:load_all(group)
 end
 
 GoDataset = Dataset:new()
-GoDataset.root = "../go/"
+GoDataset.root = "data/"
 
 function GoDataset:preprocess(data)
     ---takes a torch object of data and turns it into the actual dataset we're going to train on
     if self._initialized ~= true then self:init() end
-    input = torch.DoubleTensor(data:size()):zero()
+    input = torch.DoubleTensor(data.board:size()):zero()
     board = data.board[1]
 
     --mark stones by 1s?
