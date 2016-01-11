@@ -4,7 +4,7 @@ Dataset.default_group = 'train'
 Dataset.default_minibatch = 32
 Dataset.root = "data/"
 Dataset.directories = {train='train', test='test', validate='validate'}
-Dataset.input_dimensions = {3, 32, 32}
+Dataset.input_dimensions = {2, 19, 19}
 Dataset.output_dimensions = {10}
 
 function Dataset:init()
@@ -19,7 +19,7 @@ function Dataset:init()
     end
 end
 
-function Dataset:random_datum(group)
+function Dataset:load_random_datum(group)
     if self._initialized ~= true then self:init() end
     n = #self.files[group]
     index = math.random(1, n)
@@ -68,14 +68,14 @@ function Dataset:minibatch(group, size)
     size = size or self.default_minibatch
     local inputs, outputs = self:initialize_io(size)
     for i = 1, size do
-        local data = self:random_datum(group)
+        local data = self:load_random_datum(group)
         inputs[i] = data.input
         outputs[i] = data.output
     end
     return {input=inputs, output=outputs}
 end
 
-function Dataset:all_data(group)
+function Dataset:load_all(group)
     if self._initialized ~= true then self:init() end
     size = #self.files[group]
     inputs, outputs = self:initialize_io(size)
@@ -91,9 +91,12 @@ GoDataset = Dataset:new()
 GoDataset.root = "../go/"
 
 function GoDataset:preprocess(data)
+    ---takes a torch object of data and turns it into the actual dataset we're going to train on
     if self._initialized ~= true then self:init() end
-    input = torch.DoubleTensor(2, 19, 19):zero()
+    input = torch.DoubleTensor(data:size()):zero()
     board = data.board[1]
+
+    --mark stones by 1s?
     for i = 1, 19 do
         for j = 1, 19 do
             if board[i][j] > 0 then input[board[i][j]] = 1 end
