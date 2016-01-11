@@ -12,8 +12,9 @@ function Dataset:init()
     self._initialized = true
     for group, directory in pairs(self.directories) do
         self.files[group] = {}
+
         local filelist = io.popen("find "..self.root..directory.." -type f"):lines()
-        for _, file in filelist do
+        for file in filelist do
             table.insert(self.files[group], file)
         end
     end
