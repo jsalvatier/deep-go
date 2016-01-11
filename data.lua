@@ -24,7 +24,7 @@ function Dataset:load_random_datum(group)
     if self._initialized ~= true then self:init() end
     n = #self.files[group]
     index = math.random(1, n)
-    return self:load_and_preprocess(self.files[index])
+    return self:load_and_preprocess(self.files[group][index])
 end
 
 function Dataset:load_and_preprocess(filename)
@@ -84,6 +84,7 @@ function Dataset:load_all(group)
     local size = #files
     local inputs, outputs = self:new_inputs_outputs(size)
     
+
     for i = 1, size do
         local data = self:load_and_preprocess(files[i])
         inputs[i] = data.input

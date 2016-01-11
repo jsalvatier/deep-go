@@ -5,11 +5,10 @@ require"model"
 --data
 dataset = GoDataset
 
-training    = dataset:load_all("train")
-validation  = dataset:load_all("validate")
-
 --model
 
 --train
+batch = dataset:minibatch("train", 32)
+
 
 --evaluate
