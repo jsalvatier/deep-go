@@ -31,11 +31,9 @@ optimMethod = optim.sgd
 function train (dataset, group, batchsize, nbathes, model, criterion, optimMethod, optimState) 
 
     local commits = io.popen("git --no-pager log --graph -4 --pretty=format:'%h -%d %s %cr <%an>' --abbrev-commit")
-    print(commits)
     for c in commits:lines() do 
         print (c)
     end
-
 
     batch = dataset:minibatch(group, batchsize)
     --train
