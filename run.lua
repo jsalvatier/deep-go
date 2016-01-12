@@ -26,31 +26,36 @@ optimState = {
    }
 optimMethod = optim.sgd
 
---train
---[[
-parameters, gradParameters = model:getParameters()
 
-for batches = 1, nbatches do 
+function train(dataset, batchsize, nbathes, model, criterion, optimMethod, optimState) do
+
     batch = dataset:minibatch("train", batchsize)
+    --train
+    parameters, gradParameters = model:getParameters()
 
-    function feval(x) 
-        if x ~= parameters then
-            parameters:copy(x)
-        end
-        gradParameters:zero()
+    for batches = 1, nbatches do 
+        batch = dataset:minibatch("train", batchsize)
 
-        output = model:forward(batch.input)
-        f = criterion:forward(output, batch.output)
-        
-        -- estimate df/dW
-        df_do = criterion:backward(output, batch.output)
-        grad = model:backward(batch.input, df_do)
-        
-        gradParameters:div(batch.input:size()[1])
-        f = f/batch.input:size()[1]
-        return f, gradParameters
-    end 
-    optimMethod(feval, parameters, optimState)
+        function feval(x) 
+            if x ~= parameters then
+                parameters:copy(x)
+            end
+            gradParameters:zero()
+
+            output = model:forward(batch.input)
+            f = criterion:forward(output, batch.output)
+            
+            -- estimate df/dW
+            df_do = criterion:backward(output, batch.output)
+            grad = model:backward(batch.input, df_do)
+            
+            gradParameters:div(batch.input:size()[1])
+            f = f/batch.input:size()[1]
+            return f, gradParameters
+        end 
+        optimMethod(feval, parameters, optimState)
+    end
+    return parameters
 end
 --]]
 --evaluate
