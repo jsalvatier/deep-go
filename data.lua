@@ -24,7 +24,7 @@ function Dataset:load_random_datum(group)
     if self._initialized ~= true then self:init() end
     n = #self.files[group]
     index = math.random(1, n)
-    return self:load_and_preprocess(self.files[index])
+    return self:load_and_preprocess(self.files[group][index])
 end
 
 function Dataset:load_and_preprocess(filename)
@@ -84,6 +84,7 @@ function Dataset:load_all(group)
     local size = #files
     local inputs, outputs = self:new_inputs_outputs(size)
     
+
     for i = 1, size do
         local data = self:load_and_preprocess(files[i])
         inputs[i] = data.input
@@ -99,14 +100,16 @@ function GoDataset:preprocess(data)
     ---takes a torch object of data and turns it into the actual dataset we're going to train on
     if self._initialized ~= true then self:init() end
     input = torch.DoubleTensor(data.board:size()):zero()
-    board = data.board[1]
+    local board = data.board[1]
 
-    --mark stones by 1s?
+    --mark stones by 1 on different layers of the input array
     for i = 1, 19 do
         for j = 1, 19 do
-            if board[i][j] > 0 then input[board[i][j]] = 1 end
+            if board[i][j] > 0 then input[{board[i][j], i, j}] = 1 end
         end
     end
+
+    --mark move actually made
     output = 19 * (data.move.x - 1) + (data.move.y - 1)
     return {input=input, output=output}
 end
