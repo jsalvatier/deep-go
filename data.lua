@@ -4,8 +4,6 @@ Dataset.default_group = 'train'
 Dataset.default_minibatch = 32
 Dataset.root = "data/"
 Dataset.directories = {train='train', test='test', validate='validate'}
-Dataset.input_dimensions = {2, 19, 19}
-Dataset.output_dimensions = {}
 
 function Dataset:init()
     self.files = {}
@@ -92,25 +90,4 @@ function Dataset:load_all(group)
         outputs[i] = data.output
     end
     return {input=inputs, output=outputs}
-end
-
-GoDataset = Dataset:new()
-GoDataset.root = "data/"
-
-function GoDataset:preprocess(data)
-    ---takes a torch object of data and turns it into the actual dataset we're going to train on
-    if self._initialized ~= true then self:init() end
-    input = torch.DoubleTensor(torch.LongStorage(self.input_dimensions)):zero()
-    local stones = data.stones
-
-    --mark stones by 1 on different layers of the input array
-    for i = 1, 19 do
-        for j = 1, 19 do
-            if stones[{i,j}] > 0 then input[{stones[{i,j}], i, j}] = 1 end
-        end
-    end
-
-    --mark move actually made
-    output = 19 * (data.move.x - 1) + (data.move.y - 1) + 1 
-    return {input=input, output=output}
 end
