@@ -3,6 +3,7 @@ require"model"
 require 'xlua'    -- xlua provides useful tools, like progress bars
 require 'optim'   -- an optimization package, for online and batch methods
 require 'nn'
+require 'io'
 
 
 nbatches = 2 
@@ -27,9 +28,16 @@ optimState = {
 optimMethod = optim.sgd
 
 
-function train(dataset, batchsize, nbathes, model, criterion, optimMethod, optimState) do
+function train (dataset, group, batchsize, nbathes, model, criterion, optimMethod, optimState) 
 
-    batch = dataset:minibatch("train", batchsize)
+    local commits = io.popen("git --no-pager log --graph -4 --pretty=format:'%h -%d %s %cr <%an>' --abbrev-commit")
+    print(commits)
+    for c in commits:lines() do 
+        print (c)
+    end
+
+
+    batch = dataset:minibatch(group, batchsize)
     --train
     parameters, gradParameters = model:getParameters()
 
