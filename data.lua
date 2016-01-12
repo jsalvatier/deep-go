@@ -5,7 +5,7 @@ Dataset.default_minibatch = 32
 Dataset.root = "data/"
 Dataset.directories = {train='train', test='test', validate='validate'}
 Dataset.input_dimensions = {2, 19, 19}
-Dataset.output_dimensions = {10}
+Dataset.output_dimensions = {391}
 
 function Dataset:init()
     self.files = {}
@@ -99,13 +99,13 @@ GoDataset.root = "data/"
 function GoDataset:preprocess(data)
     ---takes a torch object of data and turns it into the actual dataset we're going to train on
     if self._initialized ~= true then self:init() end
-    input = torch.DoubleTensor(data.board:size()):zero()
-    local board = data.board[1]
+    input = torch.DoubleTensor(torch.LongStorage(self.input_dimensions)):zero()
+    local stones = data.stones
 
     --mark stones by 1 on different layers of the input array
     for i = 1, 19 do
         for j = 1, 19 do
-            if board[i][j] > 0 then input[{board[i][j], i, j}] = 1 end
+            if stones[{i,j}] > 0 then input[{stones[{i,j}], i, j}] = 1 end
         end
     end
 
