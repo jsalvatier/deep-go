@@ -119,7 +119,6 @@ function get_ranks(s)
 end
 
 function summarize_board(stones)
-    local kills = torch.ByteTensor(2, 19, 19):zero()
     local kills, liberties, liberties_after = {}, {}, {}
     for k = 1, 2 do
         kills[k] = {}
@@ -134,8 +133,7 @@ function summarize_board(stones)
         for j = 1,19 do
             for k = 1, 2 do
                 if stones[i][j] == 0 then
-                    liberties_after[k][i][j] = count_liberties(stones, i, j, true, k)
-                    kills[k][i][j] = count_kills(stones, i, j, k)
+                    kills[k][i][j], liberties_after[k][i][j] = count_kills_and_liberties(stones, i, j, k)
                 else
                     liberties_after[k][i][j] = 0
                     kills[k][i][j] = 0
@@ -221,7 +219,28 @@ function neighbors(a, b)
     return iter
 end
 
-function count_liberties(board, x, y, count, player)
+function apply_f_if_dead(board, x, y, f)
+    local liberties, group = count_liberties(board, x, y, true)
+    if liberties == 0 then
+        for h, _ in pairs(group) do
+            local a, b = unhash(h)
+            f(a, b, 0)
+        end
+    end
+end
+
+function apply_f_to_dead_neighbors(board, x, y, f)
+    for a, b in neighbors(x, y) do
+        if board[a][b] == 3 - board[x][y] then
+            apply_f_if_dead(board, a, b, f)
+        end
+    end
+    apply_f_if_dead(board, x, y, f)
+end
+
+
+
+function count_liberties(board, x, y, count)
     -- counts the liberties at the group containing (x, y)
     -- if player is not 0, then count liberties after player plays there
     --
@@ -229,10 +248,7 @@ function count_liberties(board, x, y, count, player)
     local group = {}
     local frontier = {}
     local liberties = {}
-    if player ~= nil and board[x][y] ~= 0 then
-        error("should not specify player for a non-empty square")
-    end
-    if player == nil then player = board[x][y] end
+    local player = board[x][y]
     if player == 0 then return 0 end
 
     frontier[hash(x,y)] = 1
@@ -246,8 +262,6 @@ function count_liberties(board, x, y, count, player)
             local nh = hash(na, nb)
             if board[na][nb] == player then
                 if group[nh] == nil then
-                    -- in this case, we haven't seen nh yet
-                    -- so add it to the queue for processing
                     frontier[nh] = 1
                 end
             elseif board[na][nb] == 0 and group[nh] ~= 1 then
@@ -262,37 +276,57 @@ function count_liberties(board, x, y, count, player)
     local result = 0
     for _, _ in pairs(liberties) do result = result + 1 end
 
-    return result, group
+    return result, group, liberties
 end
 
-function count_kills(board, x, y, player)
-    local function set(i, j, p)
-        board[i][j] = p
-    end
-    local tmp = board[x][y]
-    set(x, y, player)
-    local casualties = {}
-    for nx, ny in neighbors(x, y) do
-        if board[nx][ny] ~= player and board[nx][ny] ~= 0 then
-            local liberties, group = count_liberties(board, nx, ny, false)
-            if liberties == 0 then
-                for h, _ in pairs(group) do
-                    casualties[h] = 1
-                end
-            end
+function equal_boards(a, b)
+    for i = 1, 19 do
+        for j = 1, 19 do
+            if a[i][j] ~= b[i][j] then return false, {i,j} end
         end
     end
-    set(x, y, tmp)
-    local result = 0
-    for _, _ in pairs(casualties) do
-        result = result + 1
+    return true
+end
+
+function copy_board(b)
+    local result = {}
+    for i = 1, 19 do
+        result[i] = {}
+        for j = 1, 19 do
+            result[i][j] = b[i][j]
+        end
     end
     return result
 end
 
+function count_kills_and_liberties(board, x, y, player)
+    local kills = 0
+    local to_unwind = {}
+    local function temp_play_and_count(i, j, p)
+        if board[i][j] ~= 0 and p ~= 0 then
+            error("imagining playing in a place where we have already played")
+        end
+        if p == 0 and board[i][j] == 3 - player then
+            kills = kills + 1
+        end
+        table.insert(to_unwind, {i,j,board[i][j]})
+        board[i][j] = p
+    end
+    local function unwind()
+        for i = #to_unwind, 1, -1 do
+            m = to_unwind[i]
+            board[m[1]][m[2]] = m[3]
+        end
+    end
+    temp_play_and_count(x,y,player)
+    apply_f_to_dead_neighbors(board, x, y, temp_play_and_count)
+    local liberties = count_liberties(board, x, y, true)
+    unwind()
+    return kills, liberties
+end
+
 function update_board(stones, age, move)
-    -- updates board in place, given that move was made
-    -- move is a table with player, x, y fields
+    -- updates stones and age in place, given that move was made
     for i = 1, 19 do
         for j = 1, 19 do
             if age[i][j] > 0 and age[i][j] < 255 then
@@ -310,30 +344,10 @@ function update_board(stones, age, move)
         return stones[i][j]
     end
 
-    if get(x, y) ~= 0 then
-        error("playing somewhere that's already been played!")
-    end
+    if stones[x][y] ~= 0 then error("playing somewhere that's already been played!") end
 
     set(x, y, player)
-
-    function check_survival(i, j)
-
-        liberties, group = count_liberties(stones, i, j, false)
-        if liberties ~= 0 then return true end
-
-        -- we found no liberties, so kill the group
-        for h in next, group do
-            local a, b = unhash(h)
-            set(a, b, 0)
-        end
-
-        return false
-    end
-
-    for nx, ny in neighbors(x, y) do
-        if get(nx, ny) ~= move.player and get(nx, ny) ~= 0 then check_survival(nx, ny) end
-    end
-    check_survival(x, y)
+    apply_f_to_dead_neighbors(stones, x, y, set)
 end
 
 function make_dir(path)
