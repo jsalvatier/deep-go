@@ -56,9 +56,6 @@ function Dataset:new_inputs_outputs(size)
     end
     local output_dimensions = {}
     table.insert(output_dimensions, size)
-    for _, dimension in pairs(self.output_dimensions) do
-        table.insert(output_dimensions, dimension)
-    end
 
     local inputs = torch.DoubleTensor(torch.LongStorage(input_dimensions)):zero()
     local outputs = torch.DoubleTensor(torch.LongStorage(output_dimensions)):zero()
