@@ -5,7 +5,7 @@ Dataset.default_minibatch = 32
 Dataset.root = "data/"
 Dataset.directories = {train='train', test='test', validate='validate'}
 Dataset.input_dimensions = {2, 19, 19}
-Dataset.output_dimensions = {391}
+Dataset.output_dimensions = {}
 
 function Dataset:init()
     self.files = {}
@@ -54,8 +54,12 @@ function Dataset:new_inputs_outputs(size)
     for _, dimension in pairs(self.input_dimensions) do
         table.insert(input_dimensions, dimension)
     end
+
     local output_dimensions = {}
     table.insert(output_dimensions, size)
+    for _, dimension in pairs(self.output_dimensions) do
+        table.insert(output_dimensions, dimension)
+    end
 
     local inputs = torch.DoubleTensor(torch.LongStorage(input_dimensions)):zero()
     local outputs = torch.DoubleTensor(torch.LongStorage(output_dimensions)):zero()
@@ -107,6 +111,6 @@ function GoDataset:preprocess(data)
     end
 
     --mark move actually made
-    output = 19 * (data.move.x - 1) + (data.move.y - 1)
+    output = 19 * (data.move.x - 1) + (data.move.y - 1) + 1 
     return {input=input, output=output}
 end
