@@ -118,34 +118,35 @@ function get_ranks(s)
     end
 end
 
-function summarize_board(stones)
-    local kills, liberties, liberties_after = {}, {}, {}
+function all_kills_and_liberties_after(board)
+    local kills, liberties_after = {}, {}
     for k = 1, 2 do
         kills[k] = {}
         liberties_after[k] = {}
-    end
-    for i = 1, 19 do
-        for k = 1, 2 do
+        for i = 1, 19 do
             liberties_after[k][i] = {}
             kills[k][i] = {}
-        end
-        liberties[i] = {}
-        for j = 1,19 do
-            for k = 1, 2 do
-                if stones[i][j] == 0 then
-                    kills[k][i][j], liberties_after[k][i][j] = count_kills_and_liberties(stones, i, j, k)
+            for j = 1,19 do
+                if board[i][j] == 0 then
+                    kills[k][i][j], liberties_after[k][i][j] = count_kills_and_liberties(board, i, j, k)
                 else
                     liberties_after[k][i][j] = 0
                     kills[k][i][j] = 0
                 end
             end
-            liberties[i][j] = count_liberties(stones, i, j)
         end
     end
+    return kills, liberties_after
+end
+
+function summarize_board(stones)
+    local kills, liberties_after = all_kills_and_liberties_after(stones)
+    local ladders, liberties = all_ladder_moves_and_liberties(stones)
     return {
         stones=torch.ByteTensor(stones),
         liberties=torch.ByteTensor(liberties),
         liberties_after=torch.ByteTensor(liberties_after),
+        ladders=torch.ByteTensor(ladders),
         kills=torch.ByteTensor(kills)
     }
 end
@@ -221,7 +222,7 @@ end
 
 function apply_f_if_dead(board, x, y, f)
     local liberties, group = count_liberties(board, x, y, true)
-    if liberties == 0 then
+    if liberties == 0 and board[x][y] > 0 then
         for h, _ in pairs(group) do
             local a, b = unhash(h)
             f(a, b, 0)
@@ -318,8 +319,7 @@ function count_kills_and_liberties(board, x, y, player)
             board[m[1]][m[2]] = m[3]
         end
     end
-    temp_play_and_count(x,y,player)
-    apply_f_to_dead_neighbors(board, x, y, temp_play_and_count)
+    play_with_f(board, x, y, player, temp_play_and_count)
     local liberties = count_liberties(board, x, y, true)
     unwind()
     return kills, liberties
@@ -327,17 +327,21 @@ end
 
 function update_board(stones, age, move)
     -- updates stones and age in place, given that move was made
-    for i = 1, 19 do
-        for j = 1, 19 do
-            if age[i][j] > 0 and age[i][j] < 255 then
-                age[i][j] = age[i][j] + 1
+    if age ~= nil then
+        for i = 1, 19 do
+            for j = 1, 19 do
+                if age[i][j] > 0 and age[i][j] < 255 then
+                    age[i][j] = age[i][j] + 1
+                end
             end
         end
     end
     local x, y, player = move.x, move.y, move.player
 
     local function set(i, j, p)
-        age[i][j] = 1
+        if age ~= nil then
+            age[i][j] = 1
+        end
         stones[i][j] = p
     end
     local function get(i,j)
@@ -345,9 +349,7 @@ function update_board(stones, age, move)
     end
 
     if stones[x][y] ~= 0 then error("playing somewhere that's already been played!") end
-
-    set(x, y, player)
-    apply_f_to_dead_neighbors(stones, x, y, set)
+    play_with_f(stones, x, y, player, set)
 end
 
 function make_dir(path)
@@ -370,12 +372,109 @@ function targets_for(source, sourcedir, targetdir)
 end
 
 function transcribe_from(source, sourcedir, targetdir)
+    print("transcribing...", source)
     transcribe_from_to(source, targets_for(source, sourcedir, targetdir))
 end
 
 function transcribe_from_list(sources, sourcedir, targetdir)
     for source in sources do transcribe_from(source, sourcedir, targetdir) end
 end
+
+function play_with_f(board, x, y, player, f)
+    f(x, y, player)
+    apply_f_to_dead_neighbors(board, x, y, f)
+end
+
+function ladder_moves(board, x, y, liberty_set)
+    local to_unwind = {}
+    local function temp_play(i, j, p)
+        if board[i][j] ~= 0 and p ~= 0 then
+            error("imagining playing in a place where we have already played")
+        end
+        table.insert(to_unwind, {i,j,board[i][j]})
+        board[i][j] = p
+    end
+    local function unwind()
+        for i = #to_unwind, 1, -1 do
+            m = to_unwind[i]
+            board[m[1]][m[2]] = m[3]
+        end
+        to_unwind = {}
+    end
+    local player = board[x][y]
+    local opp = 3 - player
+    local result = {}
+
+    local liberties = {}
+    for h, _ in pairs(liberty_set) do
+        local a, b = unhash(h)
+        table.insert(liberties, {a, b})
+    end
+    assert(#liberties == 2)
+    for i = 1, 2 do
+        local a, b = liberties[i][1], liberties[i][2]
+        local oa, ob = liberties[3-i][1], liberties[3-i][2]
+        play_with_f(board, a, b, opp, temp_play)
+        local n = count_liberties(board, a, b)
+        if n > 2 then
+            play_with_f(board, oa, ob, player, temp_play)
+            local n, _, new_liberties = count_liberties(board, oa, ob)
+            if n == 1 then
+                table.insert(result, {a, b})
+            elseif n == 2 then
+                n = count_liberties(board, a, b)
+                if n > 1 and #ladder_moves(board, x, y, new_liberties) > 0 then
+                    table.insert(result, {a, b})
+                end
+            end
+        end
+        unwind()
+    end
+    return result
+end
+
+function all_ladder_moves_and_liberties(board)
+    local ladders, liberties = {}, {}
+    for k = 1, 2 do
+        ladders[k] = {}
+    end
+    for i = 1, 19 do
+        for k = 1, 2 do
+            ladders[k][i] = {}
+        end
+        liberties[i] = {}
+        for j = 1, 19 do
+            for k = 1, 2 do
+                ladders[k][i][j] = 0
+            end
+            liberties[i][j] = 0
+        end
+    end
+    local considered = {}
+    for i = 1, 19 do
+        for j = 1, 19 do
+            if board[i][j] ~= 0 and considered[hash(i, j)] ~= 1 then
+                local num_liberties, group, liberty_list = count_liberties(board, i, j)
+                local groupsize = 0
+                for h, _ in pairs(group) do
+                    considered[h] = 1
+                    groupsize = groupsize + 1
+                    local a, b = unhash(h)
+                    liberties[a][b] = num_liberties
+                end
+                if num_liberties == 2 then
+                    for _, ladder_move in pairs(ladder_moves(board, i, j, liberty_list)) do
+                        ladders[3-board[i][j]][ladder_move[1]][ladder_move[2]] = groupsize
+                    end
+                end
+            end
+        end
+    end
+    return ladders, liberties
+end
+
+
+
 
 function transcribe_from_file(filename, sourcedir, targetdir)
     local f = io.open(filename)
