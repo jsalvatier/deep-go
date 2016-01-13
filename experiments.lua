@@ -28,7 +28,7 @@ function basicGoExperiment:run()
     self:init()
     
     start_time = sys.clock()
-    train_cost = train(self.model, self.criterion, self.batchSize, self.iterations, self.optimizer, self.useCuda)
+    train_cost = train(self.model, self.criterion, self.batchSize, self.iterations, self.optimizer)
     runningTime = sys.clock() - start_time
 
     log(self, train_cost, runningTime)
