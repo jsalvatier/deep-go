@@ -29,10 +29,10 @@ function basicGoExperiment:run()
     self:init()
     
     start_time = sys.clock()
-    train_cost = train(self.model, self.criterion, self.batchSize, self.iterations, self.optimizer, self.useCuda, self.dataset, self.group)
+    train_cost,validation_cost = train(self.model, self.criterion, self.batchSize, self.iterations, self.optimizer, self.useCuda, self.dataset, self.group)
     runningTime = sys.clock() - start_time
 
-    log(self, train_cost, runningTime)
+    log(self, train_cost, runningTime, validation_cost)
 end 
 
 function getBasicModel(numLayers, kernels, channels) 
