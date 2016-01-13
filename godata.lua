@@ -102,5 +102,5 @@ end
 
 ToyDataset = GoDataset:new()
 
-ToyDataset.directories = {toy='toy'}
+ToyDataset.directories = {toy='toy', validate='toy'}
 ToyDataset.root = "data/"

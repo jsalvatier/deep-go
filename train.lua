@@ -15,13 +15,16 @@ function validate(model, data, labels, criterion)
     return cost
 end
 
-function train(model, criterion, batchSize, iters, optimizer, useCuda, dataset, group)
+function train(model, criterion, batchSize, iters, optimizer, useCuda, dataset, group, validationSize)
 
     if useCuda then 
         require 'cunn'
         require 'cutorch'
         cudaInput = torch.CudaTensor()
         cudaOutput = torch.CudaTensor()
+
+        cudaInputValidation = torch.CudaTensor()
+        cudaOutputValidation = torch.CudaTensor()
 
         model = model:cuda()
         criterion = criterion:cuda()
@@ -30,6 +33,9 @@ function train(model, criterion, batchSize, iters, optimizer, useCuda, dataset, 
     parameters, grads = model:getParameters()
 
     train_costs = {}
+    cost_average = 5
+
+    validation = dataset:minibatch("validate", validationSize)
 
     for i = 1, iters do
         batch = dataset:minibatch(group, batchSize)
@@ -42,10 +48,18 @@ function train(model, criterion, batchSize, iters, optimizer, useCuda, dataset, 
             cost, grad = eval(model, batch.input, batch.output, criterion)
         end
 
+        cost_average = cost_average*.95 + .05 * cost
+
         if i % 10 == 0 then
-            print(cost)
+            if i % 2000 == 0 then 
+                validcost, _ = eval(model, validation.input, validation.output, criterion)
+                print("training", cost_average, "validation",  validcost)
+            else
+                print("training", cost_average)
+            end
             table.insert(train_costs, cost)
         end
+
         optimizer:step(parameters, grad)
     end
 
