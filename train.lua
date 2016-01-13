@@ -36,6 +36,7 @@ function train(model, criterion, batchSize, iters, optimizer, useCuda, dataset, 
     cost_average = 5
 
     validation = dataset:minibatch("validate", validationSize)
+    validation_cost = -1
 
     for i = 1, iters do
         batch = dataset:minibatch(group, batchSize)
@@ -52,8 +53,8 @@ function train(model, criterion, batchSize, iters, optimizer, useCuda, dataset, 
 
         if i % 10 == 0 then
             if i % 2000 == 0 then 
-                validcost, _ = eval(model, validation.input, validation.output, criterion)
-                print("training", cost_average, "validation",  validcost)
+                validation_cost, _ = eval(model, validation.input, validation.output, criterion)
+                print("training", cost_average, "validation",  validation_cost)
             else
                 print("training", cost_average)
             end
@@ -63,5 +64,5 @@ function train(model, criterion, batchSize, iters, optimizer, useCuda, dataset, 
         optimizer:step(parameters, grad)
     end
 
-    return train_costs
+    return train_costs, validation_cost
 end
