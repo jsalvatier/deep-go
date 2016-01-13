@@ -2,7 +2,7 @@ Dataset = {}
 
 Dataset.default_group = 'train'
 Dataset.default_minibatch = 32
-Dataset.root = "data/"
+Dataset.root = "~/ebs_disk"
 Dataset.directories = {train='train', test='test', validate='validate'}
 
 function Dataset:init()

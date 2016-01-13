@@ -1,6 +1,7 @@
 require 'model'
 require 'train'
 require 'optimizer'
+require 'logging'
 
 useCuda = true
 iterations = 100
@@ -10,7 +11,7 @@ channelSize = 64
 batchSize = 32 
 kernels = {5}
 strides = {1}
-channels = {2}
+channels = {36}
 
 for i = 2,numLayers do
     table.insert(kernels, 3)
@@ -27,4 +28,8 @@ rate = .01
 rateDecay = 1e-7
 optimizer = SGD.new(rate, rateDecay)
 
-train(model, criterion, batchSize, iterations, optimzer, useCude)
+start_time = sys.clock()
+train_cost = train(model, criterion, batchSize, iterations, optimizer, useCuda)
+running_time = sys.clock() - start_time
+
+log('basic experiment', numLayers, channelSize, batchSize, rate, rateDecay, train_cost, running_time)

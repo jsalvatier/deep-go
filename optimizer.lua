@@ -1,5 +1,7 @@
 AdagradOptimizer = {}
+AdagradOptimizer.__index = AdagradOptimizer
 function AdagradOptimizer.new(rate, decay)
+    local self = setmetatable({}, AdagradOptimizer)
     self.grad_ms = grads:clone():fill(1)
     self.decay = decay
     self.rate = rate
@@ -12,7 +14,9 @@ function AdagradOptimizer:step(parameters, grad)
 end
 
 SGD = {}
+SGD.__index = SGD
 function SGD.new(rate, decay)
+    local self = setmetatable({}, SGD)
     self.rate = rate
     self.rate_decay = decay
     return self
