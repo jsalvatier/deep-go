@@ -17,7 +17,7 @@ function validate(model, data, labels, criterion)
     return cost
 end
 
-function train(model, criterion, batchSize, iters, optimizer, useCuda)
+function train(model, criterion, batchSize, iters, optimizer, useCuda, dataset, group)
     cudaInput = torch.CudaTensor()
     cudaOutput = torch.CudaTensor()
   
@@ -31,7 +31,7 @@ function train(model, criterion, batchSize, iters, optimizer, useCuda)
     train_costs = {}
 
     for i = 1, iters do
-        batch = ToyDataset:minibatch('toy', batchSize)
+        batch = dataset::minibatch(group, batchSize)
 
         if useCuda then
             cudaInput:resize(batch.input:size()):copy(batch.input:float())
