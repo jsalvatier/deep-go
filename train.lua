@@ -21,6 +21,7 @@ function train(model, criterion, batchSize, iters, optimizer, useCuda)
     cudaInput = torch.CudaTensor()
     cudaOutput = torch.CudaTensor()
   
+    useCuda = true 
     if useCuda then 
         model = model:cuda()
         criterion = criterion:cuda()
