@@ -10,7 +10,7 @@ channelSize = 64
 batchSize = 32 
 kernels = {5}
 strides = {1}
-channels = {2}
+channels = {36}
 
 for i = 2,numLayers do
     table.insert(kernels, 3)
@@ -27,4 +27,6 @@ rate = .01
 rateDecay = 1e-7
 optimizer = SGD.new(rate, rateDecay)
 
-train(model, criterion, batchSize, iterations, optimzer, useCude)
+train_cost = train(model, criterion, batchSize, iterations, optimizer, useCuda)
+
+

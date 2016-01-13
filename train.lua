@@ -1,4 +1,4 @@
-require 'data'
+require 'godata'
 require 'cunn'
 require 'cutorch'
 
@@ -30,7 +30,7 @@ function train(model, criterion, batchSize, iters, optimizer, useCuda)
     train_costs = {}
 
     for i = 1, iters do
-        batch = GoDataset:minibatch('train', batchSize)
+        batch = ToyDataset:minibatch('toy', batchSize)
 
         if useCuda then
             cudaInput:resize(batch.input:size()):copy(batch.input:float())
