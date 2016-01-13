@@ -12,7 +12,8 @@ LIBERTIES=STONE+3 --1 liberty, 2 liberties, ..., 4 or more liberties
 LIBERTIES_AFTER=LIBERTIES+4 -- 0, 1, 2, ..., 6 or more
 KILL=LIBERTIES_AFTER+7 --1, 2, ..., 7 or more
 AGE=KILL+7 --1, 2, ..., 5
-RANK=AGE+5 --1d, 2d, ..., 9d
+LADDER=AGE+5
+RANK=LADDER+1 --1d, 2d, ..., 9d
 TOTAL = RANK+9
 
 GoDataset.input_dimensions = {TOTAL, SIZE, SIZE}
@@ -27,6 +28,7 @@ function GoDataset:preprocess(data)
     local liberties = data.liberties
     local liberties_after = (data.liberties_after or data.liberties_after_move)[player]
     local kills = data.kills[player]
+    local ladder = data.ladders[player]
     local rank = data.ranks[player] or 1
 
     -- if white plays next, we will reverse white and black
@@ -57,6 +59,7 @@ function GoDataset:preprocess(data)
             local age = ages[transform{i,j}]
             local liberty_after = liberties_after[transform{i, j}]
             local kill = kills[transform{i, j}]
+            local ladder = ladders[transform{i, j}]
 
             if stone > 0 then
                 input[{STONE+swap_if_white(stone), i, j}] = 1
@@ -78,6 +81,10 @@ function GoDataset:preprocess(data)
 
             if age >= 1 and age <= 5 then
                 input[{AGE+age-1,i,j}] = 1
+            end
+
+            if ladder > 0 then
+                input[{LADDER,i,j}] = 1
             end
         end
     end
