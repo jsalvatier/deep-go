@@ -77,13 +77,13 @@ function all_moves(s)
         i = i+1
         if entry[1] == "B" then
             x, y = to_move(entry[2])
-            return {player=1, x=x, y=y}
+            -- x is nil if one player passes...
+            if x ~= nil then return {player=1, x=x, y=y} end
         elseif entry[1] == "W" then
             x, y = to_move(entry[2])
-            return {player=2, x=x, y=y}
-        else
-            return iter()
+            if x ~= nil then return {player=2, x=x, y=y} end
         end
+        return iter()
     end
     return iter
 end
