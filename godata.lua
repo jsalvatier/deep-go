@@ -28,7 +28,8 @@ function GoDataset:preprocess(data)
     local liberties = data.liberties
     local liberties_after = (data.liberties_after or data.liberties_after_move)[player]
     local kills = data.kills[player]
-    local ladder = data.ladders[player]
+    local ladder
+    if data.ladders ~= nil then ladder = data.ladders[player] end
     local rank = data.ranks[player] or 1
 
     -- if white plays next, we will reverse white and black
@@ -59,7 +60,8 @@ function GoDataset:preprocess(data)
             local age = ages[transform{i,j}]
             local liberty_after = liberties_after[transform{i, j}]
             local kill = kills[transform{i, j}]
-            local ladder = ladders[transform{i, j}]
+            local ladder = 0
+            if ladders ~= nil then ladder = ladders[transform{i, j}] end
 
             if stone > 0 then
                 input[{STONE+swap_if_white(stone), i, j}] = 1
@@ -99,3 +101,4 @@ end
 ToyDataset = GoDataset:new()
 
 ToyDataset.directories = {toy='toy'}
+ToyDataset.root = "data/"
