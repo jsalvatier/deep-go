@@ -1,4 +1,4 @@
-function getBasicModel(numLayers, kernels, channels) do
+function getBasicModel(numLayers, kernels, channels) 
         smodel = nn.Sequential()
 	for layer = 1, numLayers do
 	    local padding = (kernels[layer] - 1)/2
