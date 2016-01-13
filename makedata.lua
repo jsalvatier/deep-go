@@ -362,6 +362,7 @@ end
 
 function targets_for(source, sourcedir, targetdir)
     local path = translate_from_to(source, sourcedir, targetdir)
+    if paths.filep(paths.concat(path, "100")) then return nil end
     make_dir(path)
     i = 0
     local function iter()
@@ -373,7 +374,10 @@ end
 
 function transcribe_from(source, sourcedir, targetdir)
     print("transcribing...", source)
-    transcribe_from_to(source, targets_for(source, sourcedir, targetdir))
+    local targets = targets_for(source, sourcedir, targetdir)
+    if targets ~= nil then
+        transcribe_from_to(source, targets_for(source, sourcedir, targetdir))
+    end
 end
 
 function transcribe_from_list(sources, sourcedir, targetdir)
