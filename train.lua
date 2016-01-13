@@ -2,7 +2,7 @@ require 'godata'
 require 'cunn'
 require 'cutorch'
 
-function eval(inputs, targets, criterion)
+function eval(model, inputs, targets, criterion)
     grads:zero()
     preds = model:forward(inputs)
 
@@ -12,8 +12,8 @@ function eval(inputs, targets, criterion)
     return cost, grads
 end
 
-function validate(data, labels, criterion)
-    local cost, grads = eval(data:double(), labels:double(), criterion)
+function validate(model, data, labels, criterion)
+    local cost, grads = eval(model, data:double(), labels:double(), criterion)
     return cost
 end
 
@@ -35,9 +35,9 @@ function train(model, criterion, batchSize, iters, optimizer, useCuda)
         if useCuda then
             cudaInput:resize(batch.input:size()):copy(batch.input:float())
             cudaOutput:resize(batch.output:size()):copy(batch.output:float())
-            cost, grad = eval(cudaInput, cudaOutput, criterion)
+            cost, grad = eval(model, cudaInput, cudaOutput, criterion)
         else
-            cost, grad = eval(batch.input, batch.output, criterion)
+            cost, grad = eval(model, batch.input, batch.output, criterion)
         end
 
         if i % 10 == 0 then
