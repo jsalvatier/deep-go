@@ -21,7 +21,7 @@ GoDataset.input_dimensions = {TOTAL, SIZE, SIZE}
 function GoDataset:preprocess(data)
     ---takes a torch object of data and turns it into the actual dataset we're going to train on
     if self._initialized ~= true then self:init() end
-    input = torch.DoubleTensor(torch.LongStorage(self.input_dimensions)):zero()
+    local input = torch.DoubleTensor(torch.LongStorage(self.input_dimensions)):zero()
     local player = data.move.player
     local stones = data.stones
     local ages = data.age
@@ -93,8 +93,10 @@ function GoDataset:preprocess(data)
 
     input[RANK+rank] = torch.ones(SIZE, SIZE)
 
+    local transformed_move = transform{data.move.x, data.move.y}
+
     --mark move actually made
-    output = SIZE * (data.move.x - 1) + data.move.y
+    local output = SIZE * (transformed_move[1] - 1) + transformed_move[2]
     return {input=input, output=output}
 end
 
