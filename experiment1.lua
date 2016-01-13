@@ -1,6 +1,7 @@
 require 'model'
 require 'train'
 require 'optimizer'
+require 'logging'
 
 useCuda = true
 iterations = 100
@@ -27,6 +28,8 @@ rate = .01
 rateDecay = 1e-7
 optimizer = SGD.new(rate, rateDecay)
 
+start_time = sys.clock()
 train_cost = train(model, criterion, batchSize, iterations, optimizer, useCuda)
+running_time = sys.clock() - start_time
 
-
+log('basic experiment', numLayers, channelSize, batchSize, rate, rateDecay, train_cost, running_time)
