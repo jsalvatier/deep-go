@@ -1,6 +1,4 @@
 require 'godata'
-require 'cunn'
-require 'cutorch'
 
 function eval(model, inputs, targets, criterion)
     grads:zero()
@@ -18,20 +16,23 @@ function validate(model, data, labels, criterion)
 end
 
 function train(model, criterion, batchSize, iters, optimizer, useCuda, dataset, group)
-    cudaInput = torch.CudaTensor()
-    cudaOutput = torch.CudaTensor()
-  
-    useCuda = true 
+
     if useCuda then 
+        require 'cunn'
+        require 'cutorch'
+        cudaInput = torch.CudaTensor()
+        cudaOutput = torch.CudaTensor()
+
         model = model:cuda()
         criterion = criterion:cuda()
     end
+  
     parameters, grads = model:getParameters()
 
     train_costs = {}
 
     for i = 1, iters do
-        batch = dataset::minibatch(group, batchSize)
+        batch = dataset:minibatch(group, batchSize)
 
         if useCuda then
             cudaInput:resize(batch.input:size()):copy(batch.input:float())
