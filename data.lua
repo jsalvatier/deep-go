@@ -1,21 +1,46 @@
+Threads = require 'threads'
+Threads.serialization("threads.sharedserialize")
+
 Dataset = {}
 
 Dataset.default_group = 'train'
 Dataset.default_minibatch = 32
 Dataset.root = "~/ebs_disk"
 Dataset.directories = {train='train', test='test', validate='validate'}
+Dataset.num_threads = 16
 
 function Dataset:init()
     self.files = {}
     self._initialized = true
+    -- this is an extremely ugly hack
+    -- the problem is that metatables don't get sent to threads...
+    -- previously preprocess might live on the metatable
+    self.preprocess = self.preprocess
+    do
+        local calling_dataset = self
+        self.thread_pool = Threads(
+            self.num_threads,
+            function() 
+                dataset = calling_dataset  
+                -- jesus, this is ugly... (I started writing better code, but it doesn't work with Threads...)
+                dofile 'godata.lua'
+            end
+        )
+    end
     for group, directory in pairs(self.directories) do
         self.files[group] = {}
 
-        local filelist = io.popen("find "..self.root..directory.." -type f"):lines()
+        local filelist = io.popen("find "..self.root.."/"..directory.." -type f"):lines()
         for file in filelist do
             table.insert(self.files[group], file)
         end
     end
+end
+
+function Dataset:random_file(group)
+    local n = #self.files[group]
+    local index = math.random(1, n)
+    return self.files[group][index]
 end
 
 function Dataset:load_random_datum(group)
@@ -23,18 +48,14 @@ function Dataset:load_random_datum(group)
         print("initializing data set")
         self:init()
     end
-    n = #self.files[group]
-    index = math.random(1, n)
-    return self:load_and_preprocess(self.files[group][index])
+    return self:load_and_preprocess(self:random_file(group))
 end
 
 function Dataset:load_and_preprocess(filename)
-    if self._initialized ~= true then self:init() end
     return self:preprocess(self:load_file(filename))
 end
 
 function Dataset:load_file(filename)
-    if self._initialized ~= true then self:init() end
     return torch.load(filename)
 end
 
@@ -73,10 +94,18 @@ function Dataset:minibatch(group, size)
     size = size or self.default_minibatch
     local inputs, outputs = self:new_inputs_outputs(size)
     for i = 1, size do
-        local data = self:load_random_datum(group)
-        inputs[i] = data.input
-        outputs[i] = data.output
+        local file = self:random_file(group)
+        self.thread_pool:addjob(function()
+            local data = torch.load(file)
+            return dataset:preprocess(data)
+        end,
+        function(data)
+            inputs[i] = data.input
+            outputs[i] = data.output
+        end
+        )
     end
+    self.thread_pool:synchronize()
     return {input=inputs, output=outputs}
 end
 
