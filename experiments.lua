@@ -55,10 +55,6 @@ function Experiment:save(filename)
     torch.save(filename, self)
 end
 
-function Experiment:load(filename)
-    self = torch.load(filename)
-end
-
 function getBasicModel(numLayers, kernels, channels) 
     local smodel = nn.Sequential()
     for layer = 1, numLayers do
