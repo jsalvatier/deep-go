@@ -10,7 +10,32 @@ function eval(model, inputs, targets, criterion)
     return cost, grads
 end
 
-function train(model, criterion, batchSize, iters, optimizer, useCuda, dataset, group, validationSize)
+function makeDataParallel(model, nGPU)
+   if nGPU > 1 then
+      assert(nGPU <= cutorch.getDeviceCount(), 'number of GPUs less than nGPU specified')
+      local model_single = model
+      local oldGPU = cutorch.getDevice()
+      model = nn.DataParallelTable(1)
+      for i=1, nGPU do
+         cutorch.setDevice(i)
+         model:add(model_single:clone():cuda(), i)
+      end
+      cutorch.setDevice(oldGPU)
+   end
+   return model
+end
+
+function train(experiment, params)
+    local iters = params.iters
+    local useCuda = params.useCuda or false
+    local numGPUs = params.numGPUs or 1
+
+    local model = experiment.model
+    local criterion = experiment.criterion
+    local dataset = experiment.dataset
+    local group = experiment.group
+    local optimizer = experiment.optimizer
+    local batchSize = experiment.batchSize
 
     if useCuda then 
         require 'cunn'
@@ -23,19 +48,22 @@ function train(model, criterion, batchSize, iters, optimizer, useCuda, dataset, 
 
         model = model:cuda()
         criterion = criterion:cuda()
+        model = makeDataParallel(model, numGPUs)
     end
   
     parameters, grads = model:getParameters()
 
     train_costs = {}
     validation_costs = {}
-    cost_average = 5
+    cost_average = nil
 
-    validation = dataset:minibatch("validate", validationSize)
+    validation = dataset:minibatch("validate", experiment.validationSize)
     validation_cost = -1
 
     for i = 1, iters do
-        batch = dataset:minibatch(group, batchSize)
+        batch = dataset:minibatch(experiment.group, experiment.batchSize)
+
+        local startTime = sys.clock()
 
         if useCuda then
             cudaInput:resize(batch.input:size()):copy(batch.input:float())
@@ -45,6 +73,9 @@ function train(model, criterion, batchSize, iters, optimizer, useCuda, dataset, 
             cost, grad = eval(model, batch.input, batch.output, criterion)
         end
 
+        local iterTime = sys.clock() - startTime
+
+        if cost_average == nil then cost_average = cost end
         cost_average = .95*cost_average + .05*cost
 
         if i % 10 == 0 then
@@ -55,7 +86,7 @@ function train(model, criterion, batchSize, iters, optimizer, useCuda, dataset, 
                     validation_cost)
                 table.insert(validation_costs, validation_cost)
             else
-                print("training", cost_average)
+                print("training", cost_average, "(samples per second "..batchSize/iterTime ..")")
             end
             table.insert(train_costs, cost)
         end

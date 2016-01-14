@@ -3,8 +3,9 @@ require 'model'
 require 'optimizer'
 require 'train'
 require 'logging'
+require 'godata'
 
-Experiment = {}
+Experiment = {useCuda = true, numGPUs = 1, dataset = GoDataset, group = 'train'}
 function Experiment:new(dict)
     dict = dict or {}
     self.__index = self
@@ -27,18 +28,26 @@ function basicGoExperiment:init()
     self.model = getBasicModel(self.numLayers, self.kernels, self.channels)
 
     self.iterations = 0
+    self.initialized = true
 end
 
-function Experiment:run(iterations)
-    print(iterations) 
-    
+function Experiment:run(params)
+    -- if GPU usage is unspecified, inherit default from experiment
+    params.numGPUs = params.numGPUs or self.numGPUs
+    params.useCuda = params.useCuda or self.useCuda
+
+    assert(params.iters > 0)
+
+    if not self.initialized then
+        print("initializing model...")
+        self:init()
+    end
+
     start_time = sys.clock()
-    train_cost,validation_cost = train(self.model, self.criterion, 
-        self.batchSize, self.iterations, self.optimizer, 
-        self.useCuda, self.dataset, self.group)
+    train_cost, validation_cost = train(experiment, params)
     runningTime = sys.clock() - start_time
 
-    self.iterations = self.iterations + iterations
+    self.iterations = self.iterations + params.iters
     log(self, train_cost, runningTime, validation_cost)
 end 
 
