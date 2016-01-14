@@ -6,7 +6,7 @@ require 'godata'
 
 Experiment = {useCuda = true, numGPUs = 1, dataset = GoDataset, group = 'train'}
 function Experiment:new(dict)
-    dict = dict or {}
+    local dict = dict or {}
     self.__index = self
     setmetatable(dict, self)
     
@@ -44,10 +44,6 @@ function basicGoExperiment:init()
 end
 
 function Experiment:run(params)
-    -- if GPU usage is unspecified, inherit default from experiment
-    params.numGPUs = params.numGPUs or self.numGPUs
-    params.useCuda = params.useCuda or self.useCuda
-
     assert(params.iters > 0)
 
     if not self.initialized then

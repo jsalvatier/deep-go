@@ -1,11 +1,11 @@
 require 'io'
 
 function log(experiment, trainCost, runningTime, validationCost)
-  last_train = 'nope'
+  local last_train = 'nope'
   if #trainCost ~= 0 then
     last_train = trainCost[#trainCost]
   end
-  last_val = 'nope'
+  local last_val = 'nope'
   if #validationCost ~= 0 then
     last_val = validationCost[#validationCost]
   end
