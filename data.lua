@@ -19,7 +19,10 @@ function Dataset:init()
 end
 
 function Dataset:load_random_datum(group)
-    if self._initialized ~= true then self:init() end
+    if self._initialized ~= true then
+        print("initializing data set")
+        self:init()
+    end
     n = #self.files[group]
     index = math.random(1, n)
     return self:load_and_preprocess(self.files[group][index])

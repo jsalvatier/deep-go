@@ -1,4 +1,5 @@
 require 'data'
+require 'torch'
 
 GoDataset = Dataset:new()
 GoDataset.output_dimensions = {}
