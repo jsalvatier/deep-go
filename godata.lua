@@ -51,14 +51,16 @@ function expand_to(n, x)
 end
 
 function GoDataset:preprocess_fast(data)
-    local input = torch.DoubleTensor(torch.LongStorage(self.input_dimensions)):zero()
+    local input = torch.DoubleTensor(torch.LongStorage(GoDataset.input_dimensions)):zero()
     local raw = data.input
     raw = transform(raw)
     local player = data.move.player
 
+
     input[STONE] = torch.eq(raw[INPUT.stone], 0)
     input[STONE+1] = torch.eq(raw[INPUT.stone], player)
     input[STONE+2] = torch.eq(raw[INPUT.stone], 3-player)
+
 
     local numbers = torch.ByteTensor(7, SIZE, SIZE)
     for i = 1, 7 do
@@ -68,6 +70,7 @@ function GoDataset:preprocess_fast(data)
     local raw_liberties = raw[INPUT.liberties]
     input[{{LIBERTIES, LIBERTIES+2}}][{{1, 3}}] = torch.eq(expand_to(3,raw_liberties), numbers[{{1, 3}}])
     input[LIBERTIES+3] = torch.ge(raw_liberties, 4)
+
 
     local raw_liberties_after = raw[INPUT.liberties_after + player - 1]
     input[LIBERTIES_AFTER]:addcmul(input[STONE], torch.eq(raw_liberties_after, 0):double())
@@ -95,7 +98,7 @@ function GoDataset:preprocess(data)
     ---takes a torch object of data and turns it into the actual dataset we're going to train on
     
     --if the data is flat, use the fast preprocessor:
-    if data.flat then return self:preprocess_fast(data) end
+    if data.flat then return GoDataset.preprocess_fast(self, data) end
 
     --otherwise use the normal preprocessor
     local input = torch.DoubleTensor(torch.LongStorage(self.input_dimensions)):zero()
@@ -187,4 +190,4 @@ end
 ToyDataset = GoDataset:new()
 
 ToyDataset.directories = {toy='toy', validate='toy'}
-ToyDataset.root = "data/"
+ToyDataset.root = "data"

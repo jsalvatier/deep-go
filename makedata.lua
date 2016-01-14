@@ -538,7 +538,6 @@ end
 
 
 
-
 function transcribe_from_to(source, targets)
     -- source is the filename from which to read a Go game, in sgf format
     -- targets is an iterator that generates filenames to which to write data points
