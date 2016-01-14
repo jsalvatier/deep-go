@@ -11,7 +11,7 @@ function log(experiment, trainCost, runningTime, validationCost)
   end
 
   io.popen("curl -v " ..
-      "-F entry.1216864853='" .. experiment.name .. "' " ..
+      "-F entry.1216864853='" .. experiment.name .. ":" .. experiment.id .. "' " ..
       "-F entry.1905150392='" .. experiment.numLayers .. "' " ..
       "-F entry.1937596538='" .. experiment.channelSize .. "' " ..
       "-F entry.1622495815='" .. experiment.batchSize .. "' " ..

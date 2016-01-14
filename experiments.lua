@@ -16,19 +16,31 @@ end
 basicGoExperiment = Experiment:new {}
 
 function basicGoExperiment:init()
+    self.id = torch.uniform()
+
+    self.iterations = 0
+    self.initialized = true
+    self.optimizer = SGD.new(self.rate, self.rateDecay)
+
+    -- set up model
     for i = 2, self.numLayers do
         table.insert(self.kernels, 3)
         table.insert(self.strides, 1)
         table.insert(self.channels, self.channelSize)
     end
     table.insert(self.channels, 1)
-
-    self.optimizer = SGD.new(self.rate, self.rateDecay)
     self.model = getBasicModel(self.numLayers, self.kernels, self.channels)
-    self.modelParameters, self.grads = self.model:getParameters()
 
-    self.iterations = 0
-    self.initialized = true
+    -- send model to GPU, and parallelize across GPUs
+    if self.useCuda then
+        self.model = self.model:cuda()
+        self.criterion = self.criterion:cuda()
+        self.model = makeDataParallel(model, self.numGPUs)
+    end
+
+    -- this has to be called only once, and after the model has been
+    -- moved to the GPU
+    self.modelParameters, self.grads = self.model:getParameters()
 end
 
 function Experiment:run(params)
@@ -51,7 +63,9 @@ function Experiment:run(params)
     log(self, train_cost, runningTime, validation_cost)
 end 
 
-function Experiment:save(filename)
+function Experiment:save(opt_filename)
+    local filename = opt_filename or self.id .. '.model'
+
     torch.save(filename, self)
 end
 
@@ -77,5 +91,19 @@ function getBasicModel(numLayers, kernels, channels)
     return smodel
 end
 
+function makeDataParallel(model, nGPU)
+   if nGPU > 1 then
+      assert(nGPU <= cutorch.getDeviceCount(), 'number of GPUs less than nGPU specified')
+      local model_single = model
+      local oldGPU = cutorch.getDevice()
+      model = nn.DataParallelTable(1)
+      for i=1, nGPU do
+         cutorch.setDevice(i)
+         model:add(model_single:clone():cuda(), i)
+      end
+      cutorch.setDevice(oldGPU)
+   end
+   return model
+end
 
 
