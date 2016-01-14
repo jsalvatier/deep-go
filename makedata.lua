@@ -1,6 +1,11 @@
 require 'io'
 require 'os'
 require 'paths'
+require 'ffi'
+
+-- this is apparently needed so that threads can successfully load the dependency...
+paths.dofile('godata.lua')
+
 
 -- sgf encodes indices as chars; this table converts them back
 chars_to_ints = {}
@@ -376,7 +381,7 @@ function transcribe_from(source, sourcedir, targetdir)
     print("transcribing...", source)
     local targets = targets_for(source, sourcedir, targetdir)
     if targets ~= nil then
-        transcribe_from_to(source, targets_for(source, sourcedir, targetdir))
+        transcribe_from_to(source, targets)
     end
 end
 
@@ -513,6 +518,27 @@ function split_to_groups(files, num_groups)
     end
 end
 
+function transcribe_in_parallel(source, target, num_threads)
+    num_threads = num_threads or 32
+    split_to_groups(all_files(source), num_threads)
+    -- this is a dumb use of threads, but we make more substantive use of it elsewhere
+    -- and I only want to use one library for parallelization
+    local Threads = require 'threads'
+    Threads.serialization('threads.sharedserialize')
+    local transcribers = Threads(
+        num_threads,
+        function()
+            paths.dofile('makedata.lua')
+        end,
+        function(idx)
+            transcribe_from_file("transcription_group_"..idx, source, target)
+        end
+    )
+end
+
+
+
+
 function transcribe_from_to(source, targets)
     -- source is the filename from which to read a Go game, in sgf format
     -- targets is an iterator that generates filenames to which to write data points
@@ -530,7 +556,7 @@ function transcribe_from_to(source, targets)
         for board in boards do
             board.ranks = ranks
             local target = targets()
-            torch.save(target, board)
+            torch.save(target, flatten_data(board))
         end
     end
     
