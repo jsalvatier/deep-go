@@ -55,7 +55,6 @@ function Experiment:run(params)
     local train_cost, validation_cost = train(experiment, params)
     local runningTime = sys.clock() - start_time
 
-    self.iterations = self.iterations + params.iters
     log(self, train_cost, runningTime, validation_cost)
 end 
 
