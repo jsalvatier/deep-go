@@ -67,6 +67,8 @@ function train(experiment, params)
         local iterTime = sys.clock() - startTime
         if cost_average == nil then cost_average = train_cost end
         cost_average = .95*cost_average + .05*train_cost
+        
+        experiment.iterations = experiment.iterations + 1
 
         if i % 10 == 0 then
             if i % 2000 == 0 then 
