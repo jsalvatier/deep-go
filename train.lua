@@ -10,26 +10,10 @@ function eval(model, grads, inputs, targets, criterion)
     return cost, grads
 end
 
-function makeDataParallel(model, nGPU)
-   if nGPU > 1 then
-      assert(nGPU <= cutorch.getDeviceCount(), 'number of GPUs less than nGPU specified')
-      local model_single = model
-      local oldGPU = cutorch.getDevice()
-      model = nn.DataParallelTable(1)
-      for i=1, nGPU do
-         cutorch.setDevice(i)
-         model:add(model_single:clone():cuda(), i)
-      end
-      cutorch.setDevice(oldGPU)
-   end
-   return model
-end
-
 function train(experiment, params)
     local iters = params.iters
-    local useCuda = params.useCuda or false
-    local numGPUs = params.numGPUs or 1
 
+    local useCuda = experiment.useCuda
     local model = experiment.model
     local criterion = experiment.criterion
     local dataset = experiment.dataset
@@ -59,10 +43,6 @@ function train(experiment, params)
 
         validationInput = cudaInputValidation
         validationOutput = cudaOutputValidation
-
-        model = model:cuda()
-        criterion = criterion:cuda()
-        model = makeDataParallel(model, numGPUs)
     end
   
     local train_costs = {}
@@ -96,6 +76,8 @@ function train(experiment, params)
                 print("training", cost_average, "validation", 
                     validation_cost)
                 table.insert(validation_costs, validation_cost)
+     
+                experiment:save()
             else
                 print("training", cost_average, "(samples per second "..batchSize/iterTime ..")")
             end
