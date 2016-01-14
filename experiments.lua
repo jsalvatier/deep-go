@@ -17,10 +17,10 @@ basicGoExperiment = Experiment:new {}
 
 function basicGoExperiment:init()
     self.id = torch.uniform()
-
     self.iterations = 0
     self.initialized = true
     self.optimizer = SGD.new(self.rate, self.rateDecay)
+    self.validation_costs = {}
 
     -- set up model
     for i = 2, self.numLayers do
