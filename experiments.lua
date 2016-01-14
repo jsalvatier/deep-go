@@ -1,5 +1,4 @@
 require 'nn'
-require 'model'
 require 'optimizer'
 require 'train'
 require 'logging'
@@ -26,6 +25,7 @@ function basicGoExperiment:init()
 
     self.optimizer = SGD.new(self.rate, self.rateDecay)
     self.model = getBasicModel(self.numLayers, self.kernels, self.channels)
+    self.modelParameters, self.grads = self.model:getParameters()
 
     self.iterations = 0
     self.initialized = true
