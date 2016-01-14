@@ -46,7 +46,6 @@ function train(experiment, params)
     end
   
     local train_costs = {}
-    local validation_costs = {}
     local cost_average = nil
 
     for i = 1, iters do
@@ -75,7 +74,7 @@ function train(experiment, params)
                     validationOutput, criterion)
                 print("training", cost_average, "validation", 
                     validation_cost)
-                table.insert(validation_costs, validation_cost)
+                table.insert(experiment.validation_costs, validation_cost)
      
                 experiment:save()
             else
