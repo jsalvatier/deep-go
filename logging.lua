@@ -1,17 +1,17 @@
 require 'io'
 
 function log(experiment, trainCost, runningTime, validationCost)
-  last_train = 'nope'
+  local last_train = 'nope'
   if #trainCost ~= 0 then
     last_train = trainCost[#trainCost]
   end
-  last_val = 'nope'
+  local last_val = 'nope'
   if #validationCost ~= 0 then
     last_val = validationCost[#validationCost]
   end
 
   io.popen("curl -v " ..
-      "-F entry.1216864853='" .. experiment.name .. "' " ..
+      "-F entry.1216864853='" .. experiment.name .. ":" .. experiment.id .. "' " ..
       "-F entry.1905150392='" .. experiment.numLayers .. "' " ..
       "-F entry.1937596538='" .. experiment.channelSize .. "' " ..
       "-F entry.1622495815='" .. experiment.batchSize .. "' " ..
