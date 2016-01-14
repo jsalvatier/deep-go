@@ -10,11 +10,6 @@ function eval(model, inputs, targets, criterion)
     return cost, grads
 end
 
-function validate(model, data, labels, criterion)
-    local cost, grads = eval(model, data:double(), labels:double(), criterion)
-    return cost
-end
-
 function train(model, criterion, batchSize, iters, optimizer, useCuda, dataset, group, validationSize)
 
     if useCuda then 
@@ -33,6 +28,7 @@ function train(model, criterion, batchSize, iters, optimizer, useCuda, dataset, 
     parameters, grads = model:getParameters()
 
     train_costs = {}
+    validation_costs = {}
     cost_average = 5
 
     validation = dataset:minibatch("validate", validationSize)
@@ -49,12 +45,15 @@ function train(model, criterion, batchSize, iters, optimizer, useCuda, dataset, 
             cost, grad = eval(model, batch.input, batch.output, criterion)
         end
 
-        cost_average = cost_average*.95 + .05 * cost
+        cost_average = .95*cost_average + .05*cost
 
         if i % 10 == 0 then
             if i % 2000 == 0 then 
-                validation_cost, _ = eval(model, validation.input, validation.output, criterion)
-                print("training", cost_average, "validation",  validation_cost)
+                validation_cost, _ = eval(model, validation.input, 
+                    validation.output, criterion)
+                print("training", cost_average, "validation", 
+                    validation_cost)
+                table.insert(validation_costs, validation_cost)
             else
                 print("training", cost_average)
             end
@@ -64,5 +63,5 @@ function train(model, criterion, batchSize, iters, optimizer, useCuda, dataset, 
         optimizer:step(parameters, grad)
     end
 
-    return train_costs, validation_cost
+    return train_costs, validation_costs
 end

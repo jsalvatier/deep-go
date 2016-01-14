@@ -1,4 +1,8 @@
 require 'nn'
+require 'model'
+require 'optimizer'
+require 'train'
+require 'logging'
 
 Experiment = {}
 function Experiment:new(dict)
@@ -9,9 +13,7 @@ function Experiment:new(dict)
     return dict
 end
 
-basicGoExperiment = Experiment:new { 
-    criterion = nn.ClassNLLCriterion()
-}
+basicGoExperiment = Experiment:new {}
 
 function basicGoExperiment:init()
     for i = 2, self.numLayers do
@@ -23,17 +25,30 @@ function basicGoExperiment:init()
 
     self.optimizer = SGD.new(self.rate, self.rateDecay)
     self.model = getBasicModel(self.numLayers, self.kernels, self.channels)
+
+    self.iterations = 0
 end
 
-function basicGoExperiment:run()
-    self:init()
+function Experiment:run(iterations)
+    print(iterations) 
     
     start_time = sys.clock()
-    train_cost,validation_cost = train(self.model, self.criterion, self.batchSize, self.iterations, self.optimizer, self.useCuda, self.dataset, self.group)
+    train_cost,validation_cost = train(self.model, self.criterion, 
+        self.batchSize, self.iterations, self.optimizer, 
+        self.useCuda, self.dataset, self.group)
     runningTime = sys.clock() - start_time
 
+    self.iterations = self.iterations + iterations
     log(self, train_cost, runningTime, validation_cost)
 end 
+
+function Experiment:save(filename)
+    torch.save(filename, self)
+end
+
+function Experiment:load(filename)
+    self = torch.load(filename)
+end
 
 function getBasicModel(numLayers, kernels, channels) 
     smodel = nn.Sequential()
