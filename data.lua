@@ -7,7 +7,7 @@ Dataset.default_group = 'train'
 Dataset.default_minibatch = 32
 Dataset.root = "~/ebs_disk"
 Dataset.directories = {train='train', test='test', validate='validate'}
-Dataset.num_threads = 16
+Dataset.num_threads = 32
 
 function Dataset:init()
     self.files = {}
@@ -17,15 +17,22 @@ function Dataset:init()
     -- previously preprocess might live on the metatable
     self.preprocess = self.preprocess
     do
-        local calling_dataset = self
-        self.thread_pool = Threads(
-            self.num_threads,
-            function() 
-                dataset = calling_dataset  
-                -- jesus, this is ugly... (I started writing better code, but it doesn't work with Threads...)
-                dofile 'godata.lua'
-            end
-        )
+        if self.num_threads > 1 then
+            local calling_dataset = self
+            self.thread_pool = Threads(
+                self.num_threads,
+                function() 
+                    dataset = calling_dataset  
+                    -- jesus, this is ugly... (I started writing better code, but it doesn't work with Threads...)
+                    dofile 'godata.lua'
+                end
+            )
+        else
+            self.thread_pool = {}
+            local dataset = self
+            function self.thread_pool:addjob(f1, f2) f2(f1()) end
+            function self.thread_pool:synchronize() end
+        end
     end
     for group, directory in pairs(self.directories) do
         self.files[group] = {}
@@ -93,20 +100,27 @@ function Dataset:minibatch(group, size)
     if self._initialized ~= true then self:init() end
     size = size or self.default_minibatch
     local inputs, outputs = self:new_inputs_outputs(size)
+    if self.num_threads == 1 then
+        dataset = self
+    end
     for i = 1, size do
         local file = self:random_file(group)
         self.thread_pool:addjob(function()
+            print("OK")
             local data = torch.load(file)
+            print("OK still")
+            for x, y in pairs(data) do print(x, y) end
             return dataset:preprocess(data)
         end,
         function(data)
+            print(data)
             inputs[i] = data.input
             outputs[i] = data.output
         end
         )
     end
     self.thread_pool:synchronize()
-    return {input=inputs, output=outputs}
+    return {input=minibatch_inputs, output=minibatch_outputs}
 end
 
 function Dataset:load_all(group)
