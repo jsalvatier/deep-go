@@ -10,8 +10,8 @@ Experiment = {
     dataset = GoDataset,
     group = 'train',
     datasetRoot = nil,
-    validationSize = 200,
-    iterations = 100,
+    validationSize = 2000,
+    validation_interval = 2000,
     batchSize = 32,
 }
 
