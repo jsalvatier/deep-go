@@ -2,7 +2,7 @@ require 'nn'
 require 'optimizer'
 require 'train'
 require 'logging'
-require 'godata'
+require 'data'
 
 
 Experiment = {
@@ -12,8 +12,8 @@ Experiment = {
     datasets = {},
     data_root = "/home/ubuntu/ebs_disk",
     validationSize = 2000,
-    validation_interval = 2000
-    batchSize = 32,
+    validation_interval = 2000,
+    batchSize = 32
 }
 
 function Experiment:new(dict)
