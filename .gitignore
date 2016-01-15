@@ -3,9 +3,6 @@
 
 raw
 sorted
-data/train
-data/test
-data/validate
 
 transcription_group_*
 
