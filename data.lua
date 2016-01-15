@@ -40,7 +40,16 @@ function Dataset:init()
     --read index file with paths to games and move counts
     self.games = {}
     for group, directory in pairs(self.directories) do
-        local counts = io.open(self.root .. "/" .. directory .. "_game_counts.txt")
+        local path = self.root .. "/" .. directory
+        local file = path .. "_game_counts.txt"
+        local counts = io.open(file)
+
+        if counts == nil then 
+            local command = "sh count_game_moves.sh " .. path .. " > " .. file
+            print (command)
+            io.popen(command):close()
+            counts = io.open(file)
+        end 
 
         for line in counts:lines() do
             local r = line:split("\t")
