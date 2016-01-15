@@ -51,8 +51,8 @@ function train(experiment, params)
     local cost_average = nil
 
     for i = 1, iters do
-        local train_set = dataset:minibatch(group, batchSize)
         local startTime = sys.clock()
+        local train_set = dataset:minibatch(group, batchSize)
         local input = train_set.input
         local output = train_set.output
 
