@@ -4,16 +4,41 @@ require 'train'
 require 'logging'
 require 'godata'
 
-Experiment = {useCuda = true, numGPUs = 1, dataset = GoDataset, group = 'train'}
+Experiment = {
+    useCuda = false,
+    numGPUs = 1,
+    dataset = GoDataset,
+    group = 'train',
+    datasetRoot = nil,
+    validationSize = 200,
+    iterations = 100,
+    batchSize = 32,
+}
+
 function Experiment:new(dict)
     local dict = dict or {}
     self.__index = self
+    dict.parent = self
     setmetatable(dict, self)
     
     return dict
 end
 
-basicGoExperiment = Experiment:new {}
+basicGoExperiment = Experiment:new { 
+    name = "basicGoExperiment",
+    dataset = GoDataset,
+
+    kernels = {5},
+    strides = {1},
+    channels = {37},
+    numLayers = 3,
+    channelSize = 64,
+    
+    rate = .01,
+    rateDecay = 1e-7,
+
+    criterion = nn.ClassNLLCriterion()
+}
 
 function basicGoExperiment:init()
     self.id = torch.uniform()
@@ -54,7 +79,7 @@ function Experiment:run(params)
     end
 
     local start_time = sys.clock()
-    local train_cost, validation_cost = train(experiment, params)
+    local train_cost, validation_cost = train(self, params)
     local runningTime = sys.clock() - start_time
 
     log(self, train_cost, runningTime)
