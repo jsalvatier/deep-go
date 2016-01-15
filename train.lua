@@ -79,7 +79,7 @@ function train(experiment, params)
 
         if experiment.iterations % 10 == 0 then
             if experiment.iterations % 2000 == 0 then 
-                validation_cost, _ = eval(model, validationInput, grads,
+                validation_cost, _ = eval(model, grads, validationInput, 
                     validationOutput, criterion)
                 print("training", cost_average, "validation", 
                     validation_cost)
