@@ -36,33 +36,35 @@ function Dataset:init()
         end
     end
 
-    for group, directory in pairs(self.directories) do
-        self.game_names[group] = {}
-        self.game_sizes[group] = {}
 
-        local find_command = "find "..self.root.."/"..directory.." -mindepth 2 -maxdepth 2 -type d"
-        local game_list = io.popen(find_command):lines()
-        for game in game_list do
-            table.insert(self.game_names[group], game)
-            local num_files = io.popen("ls "..game.." | wc -w")
-            table.insert(self.game_sizes[group], tonumber(num_files:read()))
-            num_files:close()
-        end
+
+    self.games = {}
+    for group, directory in pairs(self.directories) do
+        local counts = io.open(self.root .. "/" .. directory .. "_game_counts.txt")
+
+        for line in counts:lines() do
+            local r = line:split("\t")
+            print (r)
+            game = { name = r[1], size = tonumber(r[2]) } 
+
+            if game.size > 0 then 
+                table.insert(self.games, game) 
+            end
+
+        end 
+        counts:close()
+
+        
     end
 end
 
 function Dataset:generate_random_filename(group)
-    local game_names = self.game_names[group]
-    local game_sizes = self.game_sizes[group]
+    local games = self.games
 
-    local random_index = math.random(1, #game_names)
-    while game_sizes[random_index] == 0 do
-      random_index = math.random(1, #game_names)
-    end
+    local game = games[math.random(1, #games)]
+    local random_move = math.random(1, game.size)
 
-    local random_game = game_names[random_index]
-    local random_move = math.random(1, game_sizes[random_index])
-    return random_game .. "/" .. random_move
+    return game.name .. "/" .. random_move
 end
 
 function Dataset:load_random_datum(group)
