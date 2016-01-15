@@ -11,8 +11,8 @@ Experiment = {
     directories = {train="train", validation="validation", test="test"},
     datasets = {},
     data_root = "/home/ubuntu/ebs_disk",
-    validationSize = 200,
-    iterations = 100,
+    validationSize = 2000,
+    validation_interval = 2000
     batchSize = 32,
 }
 
