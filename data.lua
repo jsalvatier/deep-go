@@ -6,7 +6,7 @@ Dataset = {}
 Dataset.default_group = 'train'
 Dataset.default_minibatch = 32
 Dataset.root = "~/ebs_disk"
-Dataset.directories = {train='train', test='test', validate='validate'}
+Dataset.directories = {train='train', test='test', validate='validation'}
 Dataset.num_threads = 32
 
 function Dataset:init()
@@ -40,7 +40,7 @@ function Dataset:init()
         self.game_names[group] = {}
         self.game_sizes[group] = {}
 
-        local find_command = "find "..self.root..directory.." -mindepth 2 -maxdepth 2 -type d"
+        local find_command = "find "..self.root.."/"..directory.." -mindepth 2 -maxdepth 2 -type d"
         local game_list = io.popen(find_command):lines()
         for game in game_list do
             table.insert(self.game_names[group], game)
@@ -119,7 +119,7 @@ function Dataset:minibatch(group, size)
         dataset = self
     end
     for i = 1, size do
-        local file = self:random_file(group)
+        local file = self:generate_random_filename(group)
         self.thread_pool:addjob(function()
             print("OK")
             local data = torch.load(file)
