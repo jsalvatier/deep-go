@@ -10,6 +10,29 @@ function eval(model, grads, inputs, targets, criterion)
     return cost, grads
 end
 
+function eval_validation(experiment, input, targets)
+    local model = experiment.model
+    local criterion = experiment.criterion
+    local batchSize = experiment.batchSize
+    local validation_size = (#input)[1]
+
+    local sum_costs = 0
+
+    for i = 1,validation_size/batchSize do
+        range = {(i-1)*batchSize + 1, math.min(i*batchSize, validation_size)}
+        batch = input[{range}]
+        batch_targets = targets[{range}]
+
+        local preds = model:forward(batch)
+        local cost = criterion:forward(preds, batch_targets)
+
+        local size = range[2] - range[1]
+        sum_costs = sum_costs + cost*size
+    end
+
+    return sum_costs/validation_size
+end
+
 function train(experiment, params)
     local iters = params.iters
 
@@ -78,9 +101,8 @@ function train(experiment, params)
         experiment.iterations = experiment.iterations + 1
 
         if experiment.iterations % 10 == 0 then
-            if experiment.iterations % 2000 == 0 then 
-                validation_cost, _ = eval(model, grads, validationInput, 
-                    validationOutput, criterion)
+            if experiment.iterations % experiment.validation_interval == 0 then 
+                validation_cost, _ = eval_validation(experiment, validationInput, validationOutput)
                 print("training", cost_average, "validation", 
                     validation_cost)
                 table.insert(experiment.validation_costs, validation_cost)
