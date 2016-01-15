@@ -121,21 +121,17 @@ function Dataset:minibatch(group, size)
     for i = 1, size do
         local file = self:generate_random_filename(group)
         self.thread_pool:addjob(function()
-            print("OK")
             local data = torch.load(file)
-            print("OK still")
-            for x, y in pairs(data) do print(x, y) end
             return dataset:preprocess(data)
         end,
         function(data)
-            print(data)
             inputs[i] = data.input
             outputs[i] = data.output
         end
         )
     end
     self.thread_pool:synchronize()
-    return {input=minibatch_inputs, output=minibatch_outputs}
+    return {input=inputs, output=outputs}
 end
 
 function Dataset:load_all(group)

@@ -29,11 +29,13 @@ function train(experiment, params)
     local validationInput = validation_set.input
     local validationOutput = validation_set.output 
 
+    local cudaInput, cudaOutput
+
     if useCuda then 
         require 'cunn'
         require 'cutorch'
-        local cudaInput = torch.CudaTensor()
-        local cudaOutput = torch.CudaTensor()
+        cudaInput = torch.CudaTensor()
+        cudaOutput = torch.CudaTensor()
 
         local cudaInputValidation = torch.CudaTensor()
         local cudaOutputValidation = torch.CudaTensor()
@@ -49,8 +51,8 @@ function train(experiment, params)
     local cost_average = nil
 
     for i = 1, iters do
-        local startTime = sys.clock()
         local train_set = dataset:minibatch(group, batchSize)
+        local startTime = sys.clock()
         local input = train_set.input
         local output = train_set.output
 
