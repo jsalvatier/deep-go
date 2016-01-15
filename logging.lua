@@ -1,13 +1,13 @@
 require 'io'
 
-function log(experiment, trainCost, runningTime, validationCost)
+function log(experiment, trainCost, runningTime)
   local last_train = 'nope'
   if #trainCost ~= 0 then
     last_train = trainCost[#trainCost]
   end
   local last_val = 'nope'
-  if #validationCost ~= 0 then
-    last_val = validationCost[#validationCost]
+  if #experiment.validation_costs ~= 0 then
+    last_val = experiment.validation_costs[#experiment.validation_costs]
   end
 
   io.popen("curl -v " ..
