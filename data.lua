@@ -10,7 +10,8 @@ Dataset.directories = {train='train', test='test', validate='validate'}
 Dataset.num_threads = 32
 
 function Dataset:init()
-    self.files = {}
+    self.game_names = {}
+    self.game_sizes = {}
     self._initialized = true
     -- this is an extremely ugly hack
     -- the problem is that metatables don't get sent to threads...
@@ -34,20 +35,34 @@ function Dataset:init()
             function self.thread_pool:synchronize() end
         end
     end
-    for group, directory in pairs(self.directories) do
-        self.files[group] = {}
 
-        local filelist = io.popen("find "..self.root.."/"..directory.." -type f"):lines()
-        for file in filelist do
-            table.insert(self.files[group], file)
+    for group, directory in pairs(self.directories) do
+        self.game_names[group] = {}
+        self.game_sizes[group] = {}
+
+        local find_command = "find "..self.root..directory.." -mindepth 2 -maxdepth 2 -type d"
+        local game_list = io.popen(find_command):lines()
+        for game in game_list do
+            table.insert(self.game_names[group], game)
+            local num_files = io.popen("ls "..game.." | wc -w")
+            table.insert(self.game_sizes[group], tonumber(num_files:read()))
+            num_files:close()
         end
     end
 end
 
-function Dataset:random_file(group)
-    local n = #self.files[group]
-    local index = math.random(1, n)
-    return self.files[group][index]
+function Dataset:generate_random_filename(group)
+    local game_names = self.game_names[group]
+    local game_sizes = self.game_sizes[group]
+
+    local random_index = math.random(1, #game_names)
+    while game_sizes[random_index] == 0 do
+      random_index = math.random(1, #game_names)
+    end
+
+    local random_game = game_names[random_index]
+    local random_move = math.random(1, game_sizes[random_index])
+    return random_game .. "/" .. random_move
 end
 
 function Dataset:load_random_datum(group)
@@ -55,7 +70,7 @@ function Dataset:load_random_datum(group)
         print("initializing data set")
         self:init()
     end
-    return self:load_and_preprocess(self:random_file(group))
+    return self:load_and_preprocess(self:generate_random_filename(group))
 end
 
 function Dataset:load_and_preprocess(filename)
