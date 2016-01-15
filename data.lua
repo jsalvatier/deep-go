@@ -3,7 +3,6 @@ Threads.serialization("threads.sharedserialize")
 
 Dataset = {}
 
-Dataset.default_group = 'train'
 Dataset.default_minibatch = 32
 Dataset.root = "/home/ubuntu/ebs_disk"
 Dataset.directories = {train='train', test='test', validate='validation'}
@@ -38,24 +37,23 @@ function Dataset:init()
 
 
 
+    --read index file with paths to games and move counts
     self.games = {}
     for group, directory in pairs(self.directories) do
         local counts = io.open(self.root .. "/" .. directory .. "_game_counts.txt")
 
         for line in counts:lines() do
             local r = line:split("\t")
-            print (r)
-            game = { name = r[1], size = tonumber(r[2]) } 
+            local game = { name = r[1], size = tonumber(r[2]) } 
 
+            --some games have no moves and we want to remove those
             if game.size > 0 then 
                 table.insert(self.games, game) 
             end
-
         end 
         counts:close()
-
-        
     end
+
 end
 
 function Dataset:generate_random_filename(group)
