@@ -33,9 +33,11 @@ function basicGoExperiment:init()
 
     -- send model to GPU, and parallelize across GPUs
     if self.useCuda then
+	require 'cutorch'
+	require 'cunn'
         self.model = self.model:cuda()
         self.criterion = self.criterion:cuda()
-        self.model = makeDataParallel(model, self.numGPUs)
+        self.model = makeDataParallel(self.model, self.numGPUs)
     end
 
     -- this has to be called only once, and after the model has been
