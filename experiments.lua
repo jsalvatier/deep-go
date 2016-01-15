@@ -4,12 +4,13 @@ require 'train'
 require 'logging'
 require 'godata'
 
+
 Experiment = {
     useCuda = false,
     numGPUs = 1,
-    dataset = GoDataset,
-    group = 'train',
-    datasetRoot = nil,
+    directories = {train="train", validation="validation", test="test"},
+    datasets = {},
+    data_root = "/home/ubuntu/ebs_disk",
     validationSize = 200,
     iterations = 100,
     batchSize = 32,
@@ -17,16 +18,20 @@ Experiment = {
 
 function Experiment:new(dict)
     local dict = dict or {}
+    local result = {}
+    for key, value in pairs(self) do
+        result[key] = value
+    end
+    for key, value in pairs(dict) do
+        result[key] = value
+    end
     self.__index = self
-    dict.parent = self
-    setmetatable(dict, self)
-    
-    return dict
+    setmetatable(result, self)
+    return result 
 end
 
 basicGoExperiment = Experiment:new { 
     name = "basicGoExperiment",
-    dataset = GoDataset,
 
     kernels = {5},
     strides = {1},
@@ -40,14 +45,46 @@ basicGoExperiment = Experiment:new {
     criterion = nn.ClassNLLCriterion()
 }
 
-function basicGoExperiment:init()
+function Experiment:init_data()
+    for group, directory in pairs(self.directories) do
+        self.datasets[group] = Dataset:new{root=self.data_root, directory=directory}
+        self.datasets[group]:init()
+    end
+end
+
+dont_serialize = {datasets}
+
+function Experiment:pickle()
+    local pickled = {}
+    for key, value  in pairs(self) do
+        if dont_serialize[key] ~= 1 then pickled[key] = value end
+    end
+    return pickled
+end
+
+function Experiment:unpickle(pickled)
+    result = self:new()
+    for key, value in pairs(pickled) do
+        if dont_serialize[key] ~=1 then result[key] = value end
+    end
+    result:init_data()
+    return result
+end
+
+
+function Experiment:init()
     self.id = torch.uniform()
     self.iterations = 0
     self.initialized = true
     self.optimizer = SGD.new(self.rate, self.rateDecay)
     self.validation_costs = {}
 
+    self:init_data()
+
+    print("initializing model...")
     -- set up model
+    -- eventually, this should only be done if the experiment is of the appropriate type
+    -- different types of experiments may have different setups
     for i = 2, self.numLayers do
         table.insert(self.kernels, 3)
         table.insert(self.strides, 1)
@@ -74,7 +111,6 @@ function Experiment:run(params)
     assert(params.iters > 0)
 
     if not self.initialized then
-        print("initializing model...")
         self:init()
     end
 
@@ -87,25 +123,11 @@ end
 
 function Experiment:save(opt_filename)
     local filename = opt_filename or self.id .. '.model'
-    local copy = shallowcopy(self)
-    copy.parent = nil
-    copy.dataset = nil
-
-    torch.save(filename, copy)
+    torch.save(filename, self:pickle())
 end
 
-function shallowcopy(orig)
-    local orig_type = type(orig)
-    local copy
-    if orig_type == 'table' then
-        copy = {}
-        for orig_key, orig_value in pairs(orig) do
-            copy[orig_key] = orig_value
-        end
-    else -- number, string, boolean, etc
-        copy = orig
-    end
-    return copy
+function Experiment:load(filename)
+    return self:unpickle(torch.load(filename))
 end
 
 function getBasicModel(numLayers, kernels, channels) 

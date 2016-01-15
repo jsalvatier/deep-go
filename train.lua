@@ -16,7 +16,7 @@ function train(experiment, params)
     local useCuda = experiment.useCuda
     local model = experiment.model
     local criterion = experiment.criterion
-    local dataset = experiment.dataset
+    local datasets = experiment.datasets
     local group = experiment.group
     local optimizer = experiment.optimizer
     local batchSize = experiment.batchSize
@@ -24,7 +24,7 @@ function train(experiment, params)
     local parameters = experiment.modelParameters
     local grads = experiment.grads
 
-    local validation_set = dataset:minibatch("validate", validationSize)
+    local validation_set = minibatch(datasets.validation, validationSize)
     local validation_cost = -1
     local validationInput = validation_set.input
     local validationOutput = validation_set.output 
@@ -52,7 +52,7 @@ function train(experiment, params)
 
     for i = 1, iters do
         local startTime = sys.clock()
-        local train_set = dataset:minibatch(group, batchSize)
+        local train_set = minibatch(datasets.train, batchSize)
         local input = train_set.input
         local output = train_set.output
 
