@@ -64,6 +64,11 @@ function train(experiment, params)
             output = cudaOutput
         end
 
+        if pcall(function() eval(model, grads, input, output, criterion) end) ~= true then
+            global_input = input
+            global_output = output
+        end
+
         local train_cost, _ = eval(model, grads, input, output, criterion)
         
         local iterTime = sys.clock() - startTime
@@ -72,8 +77,8 @@ function train(experiment, params)
         
         experiment.iterations = experiment.iterations + 1
 
-        if i % 10 == 0 then
-            if i % 2000 == 0 then 
+        if experiment.iterations % 10 == 0 then
+            if experiment.iterations % 2000 == 0 then 
                 validation_cost, _ = eval(model, validationInput, 
                     validationOutput, criterion)
                 print("training", cost_average, "validation", 
