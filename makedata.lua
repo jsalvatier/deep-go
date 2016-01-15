@@ -3,10 +3,6 @@ require 'os'
 require 'paths'
 require 'ffi'
 
--- this is apparently needed so that threads can successfully load the dependency...
-paths.dofile('godata.lua')
-
-
 -- sgf encodes indices as chars; this table converts them back
 chars_to_ints = {}
 chars = "abcdefghijklmnopqrs"

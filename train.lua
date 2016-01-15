@@ -1,4 +1,5 @@
-require 'godata'
+require 'data'
+require 'dataloader'
 
 function eval(model, grads, inputs, targets, criterion)
     grads:zero()
@@ -47,10 +48,15 @@ function train(experiment, params)
     local parameters = experiment.modelParameters
     local grads = experiment.grads
 
-    local validation_set = minibatch(datasets.validation, validationSize)
+
+    local validationInput, validationOutput
+    local function set_validation_data(minibatch)
+        validationInput = minibatch.input
+        validationOutput = minibatch.output
+    end
+    queue_on_minibatch(set_validation_data, datasets.validation, validationSize)
+    do_queued_tasks()
     local validation_cost = -1
-    local validationInput = validation_set.input
-    local validationOutput = validation_set.output 
 
     local cudaInput, cudaOutput
 
@@ -73,9 +79,8 @@ function train(experiment, params)
     local train_costs = {}
     local cost_average = nil
 
-    for i = 1, iters do
+    local function train_iter(train_set)
         local startTime = sys.clock()
-        local train_set = minibatch(datasets.train, batchSize)
         local input = train_set.input
         local output = train_set.output
 
@@ -116,6 +121,9 @@ function train(experiment, params)
 
         optimizer:step(parameters, grads)
     end
+
+    for i = 1, iters do queue_on_minibatch(train_iter, datasets.train, batchSize) end
+    do_queued_tasks()
 
     return train_costs, validation_costs
 end
