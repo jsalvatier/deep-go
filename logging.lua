@@ -10,7 +10,7 @@ function log(experiment, trainCost, runningTime)
     last_val = experiment.validation_costs[#experiment.validation_costs]
   end
 
-  io.popen("curl -v " ..
+  io.popen("curl " ..
       "-F entry.1216864853='" .. experiment.name .. ":" .. experiment.id .. "' " ..
       "-F entry.1905150392='" .. experiment.numLayers .. "' " ..
       "-F entry.1937596538='" .. experiment.channelSize .. "' " ..
