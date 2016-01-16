@@ -18,6 +18,7 @@ function eval_validation(experiment, input, targets)
     local validation_size = (#input)[1]
 
     local sum_costs = 0
+    local sum_errors = 0
 
     for i = 1,validation_size/batchSize do
         range = {(i-1)*batchSize + 1, math.min(i*batchSize, validation_size)}
@@ -25,13 +26,22 @@ function eval_validation(experiment, input, targets)
         batch_targets = targets[{range}]
 
         local preds = model:forward(batch)
+        local max, top_preds = preds:max(2)
+
+        local long_batch_targets = batch_targets
+        if not experiment.useCuda then 
+            long_batch_targets = batch_targets:long()
+        end 
+
+        local errors = torch.sum(top_preds:ne(long_batch_targets))
         local cost = criterion:forward(preds, batch_targets)
 
         local size = range[2] - range[1]
         sum_costs = sum_costs + cost*size
+        sum_errors = sum_errors + errors
     end
 
-    return sum_costs/validation_size
+    return sum_costs/validation_size, (1-sum_errors/validation_size)
 end
 
 function train(experiment, params)
@@ -108,11 +118,9 @@ function train(experiment, params)
 
         if experiment.iterations % 10 == 0 then
             if experiment.iterations % experiment.validation_interval == 0 then 
-                validation_cost, _ = eval_validation(experiment, validationInput, validationOutput)
-                print("training", cost_average, "validation", 
-                    validation_cost)
+                validation_cost, validation_accuracy = eval_validation(experiment, validationInput, validationOutput)
+                print("validation at iteration "..experiment.iterations..": cost="..validation_cost..", accuracy="..validation_accuracy)
                 table.insert(experiment.validation_costs, validation_cost)
-     
                 experiment:save()
             else
                 print("training", cost_average, "(samples per second "..batchSize/iter_time..")")
