@@ -28,7 +28,12 @@ function eval_validation(experiment, input, targets)
         local preds = model:forward(batch)
         local max, top_preds = preds:max(2)
 
-        local errors = torch.sum(top_preds:ne(batch_targets:long()))
+        local long_batch_targets = batch_targets
+        if not experiment.useCuda then 
+            long_batch_targets = batch_targets:long()
+        end 
+
+        local errors = torch.sum(top_preds:ne(long_batch_targets))
         local cost = criterion:forward(preds, batch_targets)
 
         local size = range[2] - range[1]
