@@ -9,7 +9,7 @@ Dataset.root = "/home/ubuntu/ebs_disk"
 Dataset.directory = "train"
 
 function prepare_data_loaders(number_loaders)
-    number_loaders = number_loaders or 2
+    number_loaders = number_loaders or 32
     if number_loaders > 1 then
         data_loaders = Threads(
             number_loaders,
