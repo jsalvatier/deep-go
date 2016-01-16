@@ -1,11 +1,29 @@
 Plot = require 'itorch.Plot'
+require 'cutorch'
+require 'nn'
 
-function plotTrain(train_cost)
-  Plot():line(torch.range(1,#train_cost,1), train_cost,'red','train_cost'):legend(true):title('Cost'):draw()
+function plotAll()
+  for file in io.popen('ls ~/deep-go | grep .model'):lines() do
+    print('plotting', file)
+    plotFromFile(file)
+  end
 end
 
-function plotTrainAndVal(train_cost, val_cost)
-  Plot():line(torch.range(1,#train_cost,1), train_cost,'red','train_cost')
-        :line(torch.range(1,#val_cost,1), val_cost, 'blue', 'val_cost')
-      :legend(true):title('Cost'):draw()
+
+function plotFromFile(filename)
+  loadedExperiment = torch.load(filename)
+ print(loadedExperiment.validation_costs)
+print(loadedExperiment.iterations)
+
+  if #(loadedExperiment.validation_costs) <= 1 then
+    print('not plotting because validation_costs is empty')
+    return
+  end
+
+  plotVal(loadedExperiment.validation_costs, loadedExperiment.iterations)
+end  
+
+function plotVal(val_costs, iterations)
+  local step = iterations / #val_costs
+  Plot():line(torch.range(1,iterations,step), val_costs,'red','val_costs'):legend(true):title('Validation Cost'):draw()
 end
