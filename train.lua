@@ -48,7 +48,6 @@ function train(experiment, params)
     local parameters = experiment.modelParameters
     local grads = experiment.grads
 
-
     local validationInput, validationOutput
     local function set_validation_data(minibatch)
         validationInput = minibatch.input
@@ -79,8 +78,10 @@ function train(experiment, params)
     local train_costs = {}
     local cost_average = nil
 
+    local total_start_time = sys.clock()
+
     local function train_iter(train_set)
-        local startTime = sys.clock()
+        local iter_start_time = sys.clock()
         local input = train_set.input
         local output = train_set.output
 
@@ -99,7 +100,7 @@ function train(experiment, params)
 
         local train_cost, _ = eval(model, grads, input, output, criterion)
         
-        local iterTime = sys.clock() - startTime
+        local iter_time = sys.clock() - iter_start_time
         if cost_average == nil then cost_average = train_cost end
         cost_average = .95*cost_average + .05*train_cost
         
@@ -114,7 +115,7 @@ function train(experiment, params)
      
                 experiment:save()
             else
-                print("training", cost_average, "(samples per second "..batchSize/iterTime ..")")
+                print("training", cost_average, "(samples per second "..batchSize/iter_time..")")
             end
             table.insert(train_costs, cost_average)
         end
@@ -124,6 +125,10 @@ function train(experiment, params)
 
     for i = 1, iters do queue_on_minibatch(train_iter, datasets.train, batchSize) end
     do_queued_tasks()
+
+    local total_time = sys.clock() - total_start_time
+
+    print("total samples per second", batchSize * iters / total_time)
 
     return train_costs, validation_costs
 end
