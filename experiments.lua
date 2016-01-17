@@ -167,4 +167,18 @@ function makeDataParallel(model, nGPU)
    return model
 end
 
-
+function Experiment:prepare_data(data)
+    if self.useCuda then
+        require 'cunn'
+        require 'cutorch'
+        local result = torch.CudaTensor()
+        result:resizeAs(data)
+        if data:type() == "torch.DoubleTensor" then
+            data = data:float()
+        end
+        result:copy(data)
+        return result
+    else
+        return data
+    end
+end

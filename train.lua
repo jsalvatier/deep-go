@@ -5,6 +5,8 @@ function eval(experiment, inputs, targets)
     local criterion = experiment.criterion
     local model = experiment.model
     local grads = experiment.grads
+    inputs = experiment:prepare_data(inputs)
+    targets = experiment:prepare_data(targets)
     if grads == nil then print(experiment) end
     grads:zero()
 
@@ -16,18 +18,20 @@ function eval(experiment, inputs, targets)
     return cost, grads
 end
 
-function cost_and_accuracy(experiment, input, targets)
+function cost_and_accuracy(experiment, inputs, targets)
     local model = experiment.model
     local criterion = experiment.criterion
     local batchSize = experiment.batchSize
-    local validation_size = (#input)[1]
+    local validation_size = (#inputs)[1]
+    inputs = experiment:prepare_data(inputs)
+    targets = experiment:prepare_data(targets)
 
     local sum_costs = 0
     local sum_errors = 0
 
     for i = 1,validation_size/batchSize do
         range = {(i-1)*batchSize + 1, math.min(i*batchSize, validation_size)}
-        batch = input[{range}]
+        batch = inputs[{range}]
         batch_targets = targets[{range}]
 
         local preds = model:forward(batch)
@@ -41,7 +45,7 @@ function cost_and_accuracy(experiment, input, targets)
         local errors = torch.sum(top_preds:ne(long_batch_targets))
         local cost = criterion:forward(preds, batch_targets)
 
-        local size = range[2] - range[1]
+        local size = range[2] - range[1] + 1
         sum_costs = sum_costs + cost*size
         sum_errors = sum_errors + errors
     end
@@ -60,9 +64,6 @@ end
 function train(experiment, params)
     local iters = params.iters
 
-    local useCuda = experiment.useCuda
-    local model = experiment.model
-    local criterion = experiment.criterion
     local datasets = experiment.datasets
     local optimizer = experiment.optimizer
     local batchSize = experiment.batchSize
@@ -70,28 +71,8 @@ function train(experiment, params)
     local parameters = experiment.modelParameters
     local grads = experiment.grads
 
-    local validationInput, validationOutput
     local validation_minibatch = make_minibatch(datasets.validation, validationSize)
-    local validationInput, validationOutput = validation_minibatch.input, validation_minibatch.output
 
-    local cudaInput, cudaOutput
-
-    if useCuda then 
-        require 'cunn'
-        require 'cutorch'
-        cudaInput = torch.CudaTensor()
-        cudaOutput = torch.CudaTensor()
-
-        local cudaInputValidation = torch.CudaTensor()
-        local cudaOutputValidation = torch.CudaTensor()
-
-        cudaInputValidation:resize(validationInput:size()):copy(validationInput:float())
-        cudaOutputValidation:resize(validationOutput:size()):copy(validationOutput:float()) 
-
-        validationInput = cudaInputValidation
-        validationOutput = cudaOutputValidation
-    end
-  
     local train_costs = {}
     local cost_average = nil
 
@@ -102,19 +83,6 @@ function train(experiment, params)
         local input = train_set.input
         local output = train_set.output
 
-        if useCuda then
-            cudaInput:resize(input:size()):copy(input:float())
-            cudaOutput:resize(output:size()):copy(output:float())
-
-            input = cudaInput
-            output = cudaOutput
-        end
-
-        if pcall(function() eval(experiment, input, output) end) ~= true then
-            global_input = input
-            global_output = output
-        end
-
         local train_cost, _ = eval(experiment, input, output)
         
         local iter_time = sys.clock() - iter_start_time
@@ -124,15 +92,18 @@ function train(experiment, params)
         experiment.iterations = experiment.iterations + 1
 
         if experiment.iterations % 10 == 0 then
-            if experiment.iterations % experiment.validation_interval == 0 then 
-                local validation_cost, validation_accuracy = cost_and_accuracy(experiment, validationInput, validationOutput)
-                print("validation at iteration "..experiment.iterations..": cost="..validation_cost..", accuracy="..validation_accuracy)
-                table.insert(experiment.validation_costs, validation_cost)
-                experiment:save()
-            else
-                print("training", cost_average, "(samples per second "..batchSize/iter_time..")")
-            end
+            print("training cost at iteration "..experiment.iterations..": "..cost_average, " (samples per second "..batchSize/iter_time..")")
             table.insert(train_costs, cost_average)
+        end
+        print(experiment.iterations)
+        print(experiment.validation_interval)
+        print(experiment.iterations % experiment.validation_interval)
+        if experiment.iterations % experiment.validation_interval == 0 then 
+            local validation_input, validation_output = validation_minibatch.input, validation_minibatch.output
+            local validation_cost, validation_accuracy = cost_and_accuracy(experiment, validation_input, validation_output)
+            print("validation at iteration "..experiment.iterations..": cost="..validation_cost..", accuracy="..validation_accuracy)
+            table.insert(experiment.validation_costs, validation_cost)
+            experiment:save()
         end
 
         optimizer:step(parameters, grads)
