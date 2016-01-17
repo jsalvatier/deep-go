@@ -172,7 +172,7 @@ function Experiment:prepare_data(data)
         require 'cunn'
         require 'cutorch'
         local result = torch.CudaTensor()
-        result:resizeAs(data)
+        result:resize(data:size())
         if data:type() == "torch.DoubleTensor" then
             data = data:float()
         end
