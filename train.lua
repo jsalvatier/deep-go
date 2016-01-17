@@ -95,9 +95,6 @@ function train(experiment, params)
             print("training cost at iteration "..experiment.iterations..": "..cost_average, " (samples per second "..batchSize/iter_time..")")
             table.insert(train_costs, cost_average)
         end
-        print(experiment.iterations)
-        print(experiment.validation_interval)
-        print(experiment.iterations % experiment.validation_interval)
         if experiment.iterations % experiment.validation_interval == 0 then 
             local validation_input, validation_output = validation_minibatch.input, validation_minibatch.output
             local validation_cost, validation_accuracy = cost_and_accuracy(experiment, validation_input, validation_output)
