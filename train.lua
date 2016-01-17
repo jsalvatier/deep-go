@@ -1,17 +1,22 @@
 require 'data'
 require 'dataloader'
 
-function eval(model, grads, inputs, targets, criterion)
+function eval(experiment, inputs, targets)
+    local criterion = experiment.criterion
+    local model = experiment.model
+    local grads = experiment.grads
+    if grads == nil then print(experiment) end
     grads:zero()
-    local preds = model:forward(inputs)
 
+    local preds = model:forward(inputs)
     local cost = criterion:forward(preds, targets)
-    local df_do = criterion:backward(preds, targets)
-    model:backward(inputs, df_do)
+    local output_grads = criterion:backward(preds, targets)
+    model:backward(inputs, output_grads)
+
     return cost, grads
 end
 
-function eval_validation(experiment, input, targets)
+function cost_and_accuracy(experiment, input, targets)
     local model = experiment.model
     local criterion = experiment.criterion
     local batchSize = experiment.batchSize
@@ -44,6 +49,14 @@ function eval_validation(experiment, input, targets)
     return sum_costs/validation_size, (1-sum_errors/validation_size)
 end
 
+function validate(experiment, dataset, size)
+    dataset = dataset or experiment.datasets
+    size = size or experiment.validationSize
+    local minibatch = make_minibatch(dataset.validation, size)
+    return cost_and_accuracy(experiment, minibatch.input, minibatch.output)
+end
+
+
 function train(experiment, params)
     local iters = params.iters
 
@@ -51,7 +64,6 @@ function train(experiment, params)
     local model = experiment.model
     local criterion = experiment.criterion
     local datasets = experiment.datasets
-    local group = experiment.group
     local optimizer = experiment.optimizer
     local batchSize = experiment.batchSize
     local validationSize = experiment.validationSize
@@ -59,13 +71,8 @@ function train(experiment, params)
     local grads = experiment.grads
 
     local validationInput, validationOutput
-    local function set_validation_data(minibatch)
-        validationInput = minibatch.input
-        validationOutput = minibatch.output
-    end
-    queue_on_minibatch(set_validation_data, datasets.validation, validationSize)
-    do_queued_tasks()
-    local validation_cost = -1
+    local validation_minibatch = make_minibatch(datasets.validation, validationSize)
+    local validationInput, validationOutput = validation_minibatch.input, validation_minibatch.output
 
     local cudaInput, cudaOutput
 
@@ -103,12 +110,12 @@ function train(experiment, params)
             output = cudaOutput
         end
 
-        if pcall(function() eval(model, grads, input, output, criterion) end) ~= true then
+        if pcall(function() eval(experiment, input, output) end) ~= true then
             global_input = input
             global_output = output
         end
 
-        local train_cost, _ = eval(model, grads, input, output, criterion)
+        local train_cost, _ = eval(experiment, input, output)
         
         local iter_time = sys.clock() - iter_start_time
         if cost_average == nil then cost_average = train_cost end
@@ -118,7 +125,7 @@ function train(experiment, params)
 
         if experiment.iterations % 10 == 0 then
             if experiment.iterations % experiment.validation_interval == 0 then 
-                validation_cost, validation_accuracy = eval_validation(experiment, validationInput, validationOutput)
+                local validation_cost, validation_accuracy = cost_and_accuracy(experiment, validationInput, validationOutput)
                 print("validation at iteration "..experiment.iterations..": cost="..validation_cost..", accuracy="..validation_accuracy)
                 table.insert(experiment.validation_costs, validation_cost)
                 experiment:save()

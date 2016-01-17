@@ -79,6 +79,13 @@ function Dataset:init()
     self.initialized = true
 end
 
+function make_minibatch(dataset, n)
+    local result
+    queue_on_minibatch(function(x) result = x end, dataset, n)
+    do_queued_tasks()
+    return result
+end
+
 function queue_on_minibatch(f, dataset, n)
     if dataset.initialized ~= true then dataset:init() end
     local filenames = {}
